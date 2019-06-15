@@ -6,15 +6,13 @@ all: $(OBJ)
 
 .SECONDARY:
 
-%.asm: %.c
+%.ihx: %.c
+	python ../utils/output_checks.py $< 
 	$(CC) $<
 	
-%.lst: %.asm
-	sdas8051 -plosgffw $<
-
-%.hex: %.lst
-	python ../utils/lst_to_hex.py $< > $@
+%.hex: %.ihx
+	python ../utils/output_hex.py $< > $@
 
 .PHONY: clean
 clean:
-	rm -f *.hex *.asm *.ihx *.lk *.lst *.map *.mem *.rel *.rst *.sym
+	rm -f *.checks *.hex *.asm *.ihx *.lk *.lst *.map *.mem *.rel *.rst *.sym
