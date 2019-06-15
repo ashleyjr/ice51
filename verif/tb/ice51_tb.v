@@ -76,10 +76,11 @@ module ice51_tb;
       while(1) begin 
          uart_tx = 0; 
          while(o_uart_tx) 
-            @(posedge i_clk);
+            @(posedge i_clk); 
          for(j=7;j>-1;j=j-1) begin
             #SAMPLE_TB  uart_tx[j] = o_uart_tx;
          end 
+         #SAMPLE_TB
          $display("UART RX: 0x%x (exp == 0x%x)",uart_tx,uart_checks[rx_ptr][7:0]); 
          rxs[rx_ptr] = uart_tx;
          rx_ptr = rx_ptr + 1;

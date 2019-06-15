@@ -9,7 +9,8 @@ module ice51(
    input    wire  [7:0] i_code_data,
    output   wire        o_data_wr,
    output   wire  [8:0] o_data_addr,
-   output   wire  [7:0] o_data_data
+   output   wire  [7:0] o_data_data,
+   input    wire  [7:0] i_data_data
 );
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // PARAMETERS
@@ -38,6 +39,7 @@ module ice51(
    parameter   LJMP  = 8'h02, // ljmp addr16
                LCALL = 8'h12, // lcall addr16
                DECA  = 8'h14, // dec a
+               JB    = 8'h20, // jb
                ADDAR = 8'h28, // add a, r?
                JNZ   = 8'h70, // jnz 
                MOVAI = 8'h74, // mov r?, #imm
@@ -47,10 +49,11 @@ module ice51(
                MOVD  = 8'h88, // mov (direct), r?
                MOVDP = 8'h90, // mov dptr, #imm
                MOVC  = 8'h93, // movc a, @a+dptr
+               MOVXAD= 8'hE0, // movx a, @dptr
                CLRA  = 8'hE4, // clr a
                MOVAD = 8'hE5, // mov a, direct
                MOVAR = 8'hE8, // mov a, r?
-               MOVX  = 8'hF0, // movx @dptr, a
+               MOVXDA= 8'hF0, // movx @dptr, a
                MOVRA = 8'hF8; // mov r?, a
 
    // DIRECT
@@ -78,8 +81,8 @@ module ice51(
    reg   [7:0]                   uart_tx;
    reg   [$clog2(SAMPLE)-1:0]    uart_tx_sample_count;
    wire  [$clog2(SAMPLE)-1:0]    uart_tx_sample_count_next;
-   reg   [2:0]                   uart_tx_bit_count;
-   wire  [2:0]                   uart_tx_bit_count_next;
+   reg   [3:0]                   uart_tx_bit_count;
+   wire  [3:0]                   uart_tx_bit_count_next;
    wire                          uart_tx_sample;
    wire                          uart_tx_finish;
    reg   [1:0]                   uart_tx_state;
@@ -101,6 +104,7 @@ module ice51(
    reg   [8:0]                   pc;
    wire  [8:0]                   pc_next;
    wire  [6:0]                   pc_twos;
+   wire  [6:0]                   pc_jb_bck_twos;
 
    // REGS
    wire                          r_upd;
@@ -176,10 +180,10 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // UART TX
 
-   assign uart_tx_start = (sme0 & op_movx & (dptr == 16'h0201));
+   assign uart_tx_start = (sme0 & op_movxda & (dptr == 16'h0201));
    assign uart_tx_shift = (uart_tx_state == SM_UART_TX_SEND) & uart_tx_sample;
    assign uart_tx_next  = (uart_tx_start) ? o_data_data:
-                          (uart_tx_shift) ? {uart_tx[6:0],1'b0}:
+                          (uart_tx_shift) ? {uart_tx[6:0],1'b1}:
                                             uart_tx;
 
    always@(posedge i_clk or negedge i_nrst) begin
@@ -209,7 +213,7 @@ module ice51(
       else        uart_tx_sample_count  <= uart_tx_sample_count_next;
    end
   
-   assign uart_tx_finish = uart_tx_sample & ('d7 == uart_tx_bit_count);
+   assign uart_tx_finish = uart_tx_sample & ('d10 == uart_tx_bit_count); // Final shift forces a 1
 
    assign uart_tx_bit_count_next = (uart_tx_finish) ? 'd0 : 
                                    (uart_tx_sample) ? (uart_tx_bit_count + 'd1):
@@ -250,7 +254,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
-   assign o_data_wr   = (sme0 & op_movx);
+   assign o_data_wr   = (sme0 & op_movxda);
    assign o_data_addr = dptr; 
    assign o_data_data = acc;
 
@@ -268,7 +272,9 @@ module ice51(
    assign op_movra = (op[7:3] == (MOVRA >> 3));
    assign op_movai = (op == MOVAI);
    assign op_movd  = (op[7:3] == (MOVD >> 3));
-   assign op_movx  = (op == MOVX);
+   assign op_movxda  = (op == MOVXDA);
+   assign op_movxad  = (op == MOVXAD);
+   assign op_jb = (op == JB);
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
@@ -282,7 +288,7 @@ module ice51(
    assign sme2 = (state == SM_EXECUTE2);
    assign smj  = (state == SM_JUMP);
   
-   assign d3 = op_ljmp | op_movdp;
+   assign d3 = op_ljmp | op_movdp | op_jb;
    assign e3 = 1'b0;
 
    assign state_next = (smf  & uart_load_done     ) ? SM_DECODE0:  
@@ -308,11 +314,16 @@ module ice51(
    assign pc_bck     = sme0 & op_sjmp & i_code_data[7];
    assign pc_fwd     = sme0 & op_sjmp & ~i_code_data[7];
    assign pc_replace = sme0 & op_ljmp;
-   assign pc_inc     = (smd0  & ~op_clra & ~op_movc & ~op_movra & ~op_movx) | 
+   assign pc_jb_bck  = sme0 & op_jb & (acc == 'd1) & l_data[7];
+   assign pc_jb_bck_twos = ~l_data[6:0];
+   assign pc_jb_fwd  = sme0 & op_jb & (acc == 'd1) & ~l_data[7];
+   assign pc_inc     = (smd0  & ~op_clra & ~op_movc & ~op_movra & ~op_movxda & ~op_movxad) | 
                        smd1 | 
                        (smf & uart_load_done);
    assign pc_next    = (pc_bck    ) ? pc - pc_twos - 'd1:
                        (pc_replace) ? {h_data,l_data}:
+                       (pc_jb_bck ) ? pc - pc_jb_bck_twos - 'd1:
+                       (pc_jb_fwd ) ? pc + l_data[6:0]:
                        (pc_inc    ) ? pc + 'd1 :
                                       pc;
 
@@ -345,12 +356,13 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // ACCUMULATOR 
  
-   assign acc_next = (sme0 & (op[7:3] == (MOVAR >> 3))) ? r_sel:
-                     (sme0 & (op[7:3] == (ADDAR >> 3))) ? acc + r_sel:
-                     (sme0 & (op      == DECA        )) ? acc - 'd1:
-                     (sme0 & (op      == CLRA        )) ? 'd0:                                 
-                     (sme0 & (op_movc | op_movai)     ) ? i_code_data:
-                                                          acc;
+   assign acc_next = (sme0 & (op[7:3] == (MOVAR >> 3))      ) ? r_sel:
+                     (sme0 & (op[7:3] == (ADDAR >> 3))      ) ? acc + r_sel:
+                     (sme0 & (op      == DECA        )      ) ? acc - 'd1:
+                     (sme0 & (op      == CLRA        )      ) ? 'd0:                                 
+                     (sme0 & (op_movc | op_movai)           ) ? i_code_data:
+                     (sme0 & op_movxad & (dptr == 16'h200)  ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
+                                                               acc;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    acc <= 'd0;

@@ -26,7 +26,8 @@ module ice51_top(
       .i_code_data   (code_data_rd  ),
       .o_data_wr     (data_wr       ),
       .o_data_addr   (data_addr     ),
-      .o_data_data   (data_data_wr  )
+      .o_data_data   (data_data_wr  ),
+      .i_data_data   (data_data_rd  )
    );
 
    mem_512x8b code(
@@ -46,6 +47,6 @@ module ice51_top(
       .i_addr  (data_addr        ),
       .i_wdata (data_data_wr     ),
       .i_re    (1'b1             ),
-      .o_rdata (     ) 
+      .o_rdata (data_data_rd     ) 
    );
 endmodule
