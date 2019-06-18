@@ -108,7 +108,7 @@ module ice51_tb;
       for(i=0;i<MEM_SIZE;i=i+1)
          #(SAMPLE_TB) uart_send(load_mem[i]);
 
-      #1000000
+      #3000000
       $display("ERROR: Timeout");
       $finish;
 	end

@@ -37,10 +37,13 @@ module ice51(
 
    // OPCODES
    parameter   LJMP  = 8'h02, // ljmp addr16
+               INCR  = 8'h08, // inc r?
                LCALL = 8'h12, // lcall addr16
                DECA  = 8'h14, // dec a
                JB    = 8'h20, // jb
                ADDAR = 8'h28, // add a, r?
+               JC    = 8'h40, // jc
+               XRLA  = 8'h64, // xrl a,#imm
                JNZ   = 8'h70, // jnz 
                MOVAI = 8'h74, // mov r?, #imm
                MOVDI = 8'h75, // mov direct, #imm
@@ -49,6 +52,7 @@ module ice51(
                MOVD  = 8'h88, // mov (direct), r?
                MOVDP = 8'h90, // mov dptr, #imm
                MOVC  = 8'h93, // movc a, @a+dptr
+               SUBBAI= 8'h94, // subb a,#imm
                MOVXAD= 8'hE0, // movx a, @dptr
                CLRA  = 8'hE4, // clr a
                MOVAD = 8'hE5, // mov a, direct
@@ -59,6 +63,9 @@ module ice51(
    // DIRECT
    parameter   DPL   = 8'h82,
                DPH   = 8'h83;
+  
+   // BIT
+   parameter   BIT_ACC = 8'hE0;
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // SIGNALS
@@ -105,6 +112,7 @@ module ice51(
    wire  [8:0]                   pc_next;
    wire  [6:0]                   pc_twos;
    wire  [6:0]                   pc_jb_bck_twos;
+   wire  [6:0]                   pc_jc_bck_twos;
 
    // REGS
    wire                          r_upd;
@@ -115,6 +123,7 @@ module ice51(
    // ACCUMULATOR
    wire  [7:0]                   acc_next;
    reg   [7:0]                   acc;
+   reg                           c;
 
    // DPTR
    wire  [15:0]                  dptr_next;
@@ -274,8 +283,14 @@ module ice51(
    assign op_movd  = (op[7:3] == (MOVD >> 3));
    assign op_movxda  = (op == MOVXDA);
    assign op_movxad  = (op == MOVXAD);
+   assign op_movar = (op[7:3] == (MOVAR >> 3));
    assign op_jb = (op == JB);
-
+   assign op_incr = (op[7:3] == (INCR >> 3));
+   assign op_xrla = (op == XRLA); 
+   assign op_subbai = (op == SUBBAI);
+   assign op_movri = (op[7:3] == (MOVRI >> 3));
+   assign op_jc = (op == JC); 
+   
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
 
@@ -288,13 +303,15 @@ module ice51(
    assign sme2 = (state == SM_EXECUTE2);
    assign smj  = (state == SM_JUMP);
   
+   assign d1 = op_xrla | op_subbai | op_movri | op_jc;
    assign d3 = op_ljmp | op_movdp | op_jb;
    assign e3 = 1'b0;
 
    assign state_next = (smf  & uart_load_done     ) ? SM_DECODE0:  
-                       (smd0 & d3                 ) ? SM_DECODE1:  
+                       (smd0 & (d3 | d1)          ) ? SM_DECODE1:  
                        (smd0                      ) ? SM_EXECUTE0:  
                        (smd1 & d3                 ) ? SM_DECODE2:  
+                       (smd1                      ) ? SM_EXECUTE0:  
                        (smd2                      ) ? SM_EXECUTE0:
                        (sme0 & e3                 ) ? SM_EXECUTE1:
                        (sme0                      ) ? SM_FETCH:
@@ -314,16 +331,23 @@ module ice51(
    assign pc_bck     = sme0 & op_sjmp & i_code_data[7];
    assign pc_fwd     = sme0 & op_sjmp & ~i_code_data[7];
    assign pc_replace = sme0 & op_ljmp;
-   assign pc_jb_bck  = sme0 & op_jb & (acc == 'd1) & l_data[7];
+   
+   assign pc_jb_bck  = sme0 & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7];
    assign pc_jb_bck_twos = ~l_data[6:0];
-   assign pc_jb_fwd  = sme0 & op_jb & (acc == 'd1) & ~l_data[7];
-   assign pc_inc     = (smd0  & ~op_clra & ~op_movc & ~op_movra & ~op_movxda & ~op_movxad) | 
+   assign pc_jb_fwd  = sme0 & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
+   
+   assign pc_jc_bck  = sme0 & op_jc & c & h_data[7];
+   assign pc_jc_fwd  = sme0 & op_jc & c & ~h_data[7];
+   assign pc_jc_bck_twos = ~h_data[6:0];
+   assign pc_inc     = (smd0  & ~op_movri & ~op_clra & ~op_movc & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai) | 
                        smd1 | 
                        (smf & uart_load_done);
    assign pc_next    = (pc_bck    ) ? pc - pc_twos - 'd1:
                        (pc_replace) ? {h_data,l_data}:
                        (pc_jb_bck ) ? pc - pc_jb_bck_twos - 'd1:
                        (pc_jb_fwd ) ? pc + l_data[6:0]:
+                       (pc_jc_bck ) ? pc - pc_jc_bck_twos - 'd2:
+                       (pc_jc_fwd ) ? pc + l_data[6:0]:
                        (pc_inc    ) ? pc + 'd1 :
                                       pc;
 
@@ -335,9 +359,12 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // REGS
   
-   assign r_next = op_movra ?  acc: 
-                               r_sel;
-   assign r_upd  = sme0 & op_movra;
+   assign r_next = op_movri ? h_data:
+                   op_incr  ? (r_sel + 'd1):
+                   op_movra ? acc: 
+                              r_sel;
+   
+   assign r_upd  = sme0 & (op_movra | op_incr | op_movri);
       
    assign r_sel  = r[op[2:0]];
 
@@ -356,7 +383,9 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // ACCUMULATOR 
  
-   assign acc_next = (sme0 & (op[7:3] == (MOVAR >> 3))      ) ? r_sel:
+   assign acc_next = (sme0 & op_xrla                        ) ? (acc ^ h_data):
+                     (sme0 & op_subbai                      ) ? (acc - h_data):
+                     (sme0 & (op[7:3] == (MOVAR >> 3))      ) ? r_sel:
                      (sme0 & (op[7:3] == (ADDAR >> 3))      ) ? acc + r_sel:
                      (sme0 & (op      == DECA        )      ) ? acc - 'd1:
                      (sme0 & (op      == CLRA        )      ) ? 'd0:                                 
@@ -369,6 +398,11 @@ module ice51(
       else           acc <= acc_next;
    end
     
+   always@(posedge i_clk or negedge i_nrst) begin
+      if(!i_nrst)    c <= 1'b0;
+      else           c <= 1'b1;
+   end
+   
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DPTR
    
