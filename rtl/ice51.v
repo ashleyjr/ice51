@@ -41,6 +41,7 @@ module ice51(
                LCALL = 8'h12, // lcall addr16
                DECA  = 8'h14, // dec a
                JB    = 8'h20, // jb
+               ADDAD = 8'h25, // add a, (direct)
                ADDAR = 8'h28, // add a, r?
                JC    = 8'h40, // jc
                XRLDA = 8'h62, // xrl d,a
@@ -59,6 +60,7 @@ module ice51(
                MOVAD = 8'hE5, // mov a, direct
                MOVAR = 8'hE8, // mov a, r?
                MOVXDA= 8'hF0, // movx @dptr, a
+               MOVDA = 8'hF5, // mov (direct), a
                MOVRA = 8'hF8; // mov r?, a
 
    // DIRECT
@@ -265,8 +267,8 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
-   assign o_data_wr   = (sme0 & op_movxda);
-   assign o_data_addr = dptr; 
+   assign o_data_wr   = (sme0 & op_movda);
+   assign o_data_addr = i_code_data; 
    assign o_data_data = acc;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -294,6 +296,9 @@ module ice51(
    assign op_jc = (op == JC); 
    assign op_addar = (op[7:3] == (ADDAR >> 3)); 
    assign op_xrlda = (op == XRLDA); 
+   assign op_movda = (op == MOVDA);
+   assign op_addad = (op == ADDAD);
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
 
@@ -306,7 +311,7 @@ module ice51(
    assign sme2 = (state == SM_EXECUTE2);
    assign smj  = (state == SM_JUMP);
   
-   assign d1 = op_xrla | op_subbai | op_movri | op_jc;
+   assign d1 = op_xrla | op_subbai | op_movri | op_jc | op_movad | op_addad;
    assign d3 = op_ljmp | op_movdp | op_jb;
    assign e3 = 1'b0;
 
@@ -342,7 +347,7 @@ module ice51(
    assign pc_jc_bck  = sme0 & op_jc & c & h_data[7];
    assign pc_jc_fwd  = sme0 & op_jc & c & ~h_data[7];
    assign pc_jc_bck_twos = ~h_data[6:0];
-   assign pc_inc     = (smd0  & ~op_movri & ~op_clra & ~op_movc & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_addar) | 
+   assign pc_inc     = (smd0  & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_addar) | 
                        smd1 | 
                        (smf & uart_load_done);
    assign pc_next    = (pc_bck    ) ? pc - pc_twos - 'd1:
@@ -390,7 +395,9 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // ACCUMULATOR 
  
-   assign acc_next = (sme0 & op_xrla                        ) ? (acc ^ h_data):
+   assign acc_next = (sme0 & op_addad                       ) ? (acc + i_data_data):
+                     (sme0 & op_movad                       ) ? i_data_data:
+                     (sme0 & op_xrla                        ) ? (acc ^ h_data):
                      (sme0 & op_subbai                      ) ? (acc - h_data):
                      (sme0 & (op[7:3] == (MOVAR >> 3))      ) ? r_sel:
                      (sme0 & op_addar                      ) ? acc + r_sel:
