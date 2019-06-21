@@ -11,6 +11,21 @@ CMD="cd ../.."
 echo $CMD
 $CMD
 
+# Run all tests add check for pass fail
+ALL="all"
+if [[ "$1" == "$ALL" ]]; then
+   for filename in verif/src/*.c; do
+      echo $filename 
+      ext=".hex"
+      cp -f ${filename/\.c/$ext} load_mem.hex
+      cp -f ${filename/\.c/$ext} checks.hex
+      iverilog -o ice51.dat -D SIM -c etc/filelist.txt
+      vvp ice51.dat -vcd | grep "PASSED\|ERROR"
+   done
+   exit
+fi
+
+# Run a single test
 ext=".hex"
 CMD="cp -f ${1/\.c/$ext} load_mem.hex"
 echo $CMD
@@ -29,6 +44,7 @@ CMD="vvp ice51.dat -vcd > /dev/null 2>&1"
 echo $CMD
 $CMD 
 
+# Load waves for a single test
 WAVES="w"
 if [[ "$2" == "$WAVES" ]]; then
    CMD="gtkwave -S etc/signals.tcl ice51.vcd"
