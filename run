@@ -11,6 +11,11 @@ CMD="cd ../.."
 echo $CMD
 $CMD
 
+PRELOAD="preload"
+if [[ "$2" == "$PRELOAD" ]]; then
+   P_PRELOAD=" -D PRELOAD"
+fi
+
 # Run all tests add check for pass fail
 ALL="all"
 if [[ "$1" == "$ALL" ]]; then
@@ -19,7 +24,7 @@ if [[ "$1" == "$ALL" ]]; then
       ext=".hex"
       cp -f ${filename/\.c/$ext} load_mem.hex
       cp -f ${filename/\.c/$ext} checks.hex
-      iverilog -o ice51.dat -D SIM -c etc/filelist.txt
+      iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
       vvp ice51.dat -vcd | grep "PASSED\|ERROR"
    done
    exit
@@ -36,7 +41,7 @@ CMD="cp -f ${1/\.c/$ext} checks.hex"
 echo $CMD
 $CMD
 
-CMD="iverilog -o ice51.dat -D SIM -c etc/filelist.txt"
+CMD="iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt"
 echo $CMD
 $CMD
 
@@ -46,7 +51,7 @@ $CMD
 
 # Load waves for a single test
 WAVES="w"
-if [[ "$2" == "$WAVES" ]]; then
+if [ "$2" == "$WAVES" ] || [ "$3" == "$WAVES" ]; then
    CMD="gtkwave -S etc/signals.tcl ice51.vcd"
    echo $CMD
    $CMD

@@ -36,6 +36,10 @@ module mem_512x8b (
    `ifdef SIM
       reg   [7:0] mem       [511:0];
       reg   [7:0] s_rdata; 
+  
+      `ifdef PRELOAD
+         initial $readmemh("load_mem.hex", mem);
+      `endif
 
       assign o_rdata = s_rdata;
 

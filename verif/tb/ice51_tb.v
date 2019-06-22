@@ -47,9 +47,10 @@ module ice51_tb;
    initial begin 
       $readmemh("load_mem.hex",  load_mem);
       $readmemh("checks.hex",    uart_checks);
-      // for(i=0;i<MEM_SIZE;i=i+1)  $dumpvars(0,ice51_tb.load_mem[i]); 
-      //for(i=0;i<CHECK_SIZE;i=i+1)  $dumpvars(0,ice51_tb.uart_checks[i]); 
-      for(i=0;i<8;i=i+1)         $dumpvars(0,ice51_tb.ice51_top.ice51.r[i]); 
+      // for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
+      // for(i=0;i<CHECK_SIZE;i=i+1)   $dumpvars(0,ice51_tb.uart_checks[i]); 
+      // for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.ice51_top.code.mem[i]); 
+      for(i=0;i<8;i=i+1)               $dumpvars(0,ice51_tb.ice51_top.ice51.r[i]); 
    end
   	
    task uart_send;
@@ -71,7 +72,7 @@ module ice51_tb;
    reg [7:0] rxs [0:CHECK_SIZE-1];
 
    initial begin  
-      #(CLK_PERIOD_NS*200)
+      repeat(2) @(posedge i_nrst);
       rx_ptr = 0;
       while(1) begin 
          uart_tx = 0; 
@@ -102,11 +103,13 @@ module ice51_tb;
    initial begin 
 					   i_uart_rx   = 1;
                   i_nrst		= 1;
-      #17         i_nrst      = 0;
-      #17         i_nrst      = 1;
-      
+      #1000       i_nrst      = 0;
+      #1000       i_nrst      = 1;
+
+      `ifndef PRELOAD
       for(i=0;i<MEM_SIZE;i=i+1)
          #(SAMPLE_TB) uart_send(load_mem[i]);
+      `endif
 
       #3000000
       $display("ERROR: Timeout");

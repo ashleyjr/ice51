@@ -192,10 +192,14 @@ module ice51(
       if(!i_nrst) uart_rx_count  <= 'd0;
       else        uart_rx_count  <= uart_rx_count_next;
    end
-   
+  
+   `ifdef PRELOAD
+   assign uart_load_done = 1'b1;
+   `else
    assign uart_load_done = ((uart_rx_count_next == 'd0) & uart_done) | 
                            uart_load_done_latched;
-   
+   `endif
+
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst) uart_load_done_latched  <= 'd0;
       else        uart_load_done_latched  <= uart_load_done;
