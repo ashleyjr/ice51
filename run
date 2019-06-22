@@ -19,14 +19,18 @@ fi
 # Run all tests add check for pass fail
 ALL="all"
 if [[ "$1" == "$ALL" ]]; then
+   echo ""
+   echo "--- Simulation begins ---"
    for filename in verif/src/*.c; do
       echo $filename 
+      echo -n -e " >\t\t\t"
       ext=".hex"
       cp -f ${filename/\.c/$ext} load_mem.hex
       cp -f ${filename/\.c/$ext} checks.hex
       iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
-      vvp ice51.dat -vcd | grep "PASSED\|ERROR"
+      vvp ice51.dat -vcd | grep "PASSED\|ERROR" 
    done
+   echo "--- Simulation ends ---"
    exit
 fi
 
