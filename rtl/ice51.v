@@ -44,6 +44,8 @@ module ice51(
                ADDAI = 8'h24, // add a, #imm
                ADDAD = 8'h25, // add a, (direct)
                ADDAR = 8'h28, // add a, r?
+               JNB   = 8'h30, // jnb, bit, address
+               RLC   = 8'h33, // rlc
                JC    = 8'h40, // jc
                XRLDA = 8'h62, // xrl d,a
                XRLA  = 8'h64, // xrl a,#imm
@@ -58,6 +60,8 @@ module ice51(
                MOVDP = 8'h90, // mov dptr, #imm
                MOVC  = 8'h93, // movc a, @a+dptr
                SUBBAI= 8'h94, // subb a,#imm
+               SUBBAD= 8'h95, // subb a, direct
+               MOVRD = 8'hA8, // mov r, (direct)
                CJNERI= 8'hB8, // cjne r?, #imm, offset
                CLRC  = 8'hC3, // clr c
                MOVXAD= 8'hE0, // movx a, @dptr
@@ -71,10 +75,11 @@ module ice51(
 
    // DIRECT
    parameter   DPL   = 8'h82,
-               DPH   = 8'h83;
+               DPH   = 8'h83,
+               ACC   = 8'hE0;
   
    // BIT
-   parameter   BIT_ACC = 8'hE0;
+   parameter   BIT0_ACC = 8'hE0;
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // SIGNALS
@@ -324,7 +329,11 @@ module ice51(
    assign op_movt1a = (op == MOVT1A);
    assign op_cjneri = (op[7:3] == (CJNERI >> 3));
    assign op_clrc = (op == CLRC); 
-   
+   assign op_jnb = (op == JNB);
+   assign op_rlc = (op == RLC);
+   assign op_subbad = (op == SUBBAD);
+   assign op_movrd = (op[7:3] == (MOVRD >> 3));
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
 
@@ -337,8 +346,8 @@ module ice51(
    assign sme2 = (state == SM_EXECUTE2);
    assign smj  = (state == SM_JUMP);
   
-   assign d1 = op_xrla | op_subbai | op_movri | op_jc | op_movad | op_addad | op_movdi | op_movdt0 | op_movdt1;
-   assign d3 = op_ljmp | op_movdp | op_jb | op_cjneri;
+   assign d1 = op_xrla | op_subbai | op_movri | op_jc | op_movad | op_addad | op_movdi | op_movdt0 | op_movdt1 | op_movrd;
+   assign d3 = op_jnb | op_ljmp | op_movdp | op_jb | op_cjneri;
    assign e3 = 1'b0;
 
    assign state_next = (smf  & uart_load_done     ) ? SM_DECODE0:  
@@ -369,14 +378,17 @@ module ice51(
    assign pc_jb_bck  = sme0 & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7];
    assign pc_jb_bck_twos = ~l_data[6:0];
    assign pc_jb_fwd  = sme0 & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
+  
+   assign pc_jnb     = sme0 & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
    
    assign pc_jc_bck  = sme0 & op_jc & carry & h_data[7];
    assign pc_jc_fwd  = sme0 & op_jc & carry & ~h_data[7];
    assign pc_jc_bck_twos = ~h_data[6:0];
-   assign pc_inc     = (smd0  & ~op_clrc & ~op_jc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_addar) | 
+   assign pc_inc     = (smd0  &  ~op_rlc & ~op_clrc & ~op_jc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_addar) | 
                        smd1 | 
                        (smf & uart_load_done);
-   assign pc_next    = (pc_bck    ) ? pc - pc_twos - 'd1:
+   assign pc_next    = (pc_jnb)     ? pc + l_data:
+                       (pc_bck    ) ? pc - pc_twos - 'd1:
                        (pc_replace) ? {h_data,l_data}:
                        (pc_jb_bck ) ? pc - pc_jb_bck_twos - 'd1:
                        (pc_jb_fwd ) ? pc + l_data[6:0]:
@@ -393,14 +405,14 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // REGS
   
-   assign r_next = (op_movdt0 | op_movdt1) ? i_data_data:
-                   op_xrlda                ? (acc ^ r_sel):      
-                   op_movri                ? h_data:
-                   op_incr                 ? (r_sel + 'd1):
-                   op_movra                ? acc: 
-                                             r_sel;
+   assign r_next = (op_movdt0 | op_movdt1 | op_movrd) ? i_data_data:
+                   op_xrlda                           ? (acc ^ r_sel):      
+                   op_movri                           ? h_data:
+                   op_incr                            ? (r_sel + 'd1):
+                   op_movra                           ? acc: 
+                                                        r_sel;
    
-   assign r_upd  = sme0 & (op_movra | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1);
+   assign r_upd  = sme0 & (op_movra | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1 | op_movrd);
      
    assign r_index =  (op_movdt0 | op_movdt1) ? h_data[2:0]:
                      (op_xrlda)              ? i_code_data[2:0] : 
@@ -426,11 +438,13 @@ module ice51(
 
    assign acc_sub_wrap = (acc - h_data - carry);
 
-   assign acc_next = (sme0 & op_addai                       ) ? (acc + i_code_data):
+   assign acc_next = (sme0 & op_rlc                         ) ? {acc[6:0], carry}:
+                     (sme0 & op_addai                       ) ? (acc + i_code_data):
                      (sme0 & op_addad                       ) ? (acc + i_data_data):
                      (sme0 & op_movad                       ) ? i_data_data:
                      (sme0 & op_xrla                        ) ? (acc ^ h_data):
                      (sme0 & op_subbai                      ) ? acc_sub_wrap[7:0]:
+                     (sme0 & op_subbad & (i_code_data == ACC)) ? (8'h00 - carry):
                      (sme0 & (op[7:3] == (MOVAR >> 3))      ) ? r_sel:
                      (sme0 & op_addar                      ) ? acc + r_sel:
                      (sme0 & op_deca                        ) ? acc - 'd1:
@@ -460,10 +474,12 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // CARRY
   
-   assign carry_next = (op_cjneri & (r_sel < h_data)) |
+   assign carry_next = (op_subbad & carry & (i_code_data == ACC)) |
+                       (op_rlc & acc[7]) |
+                       (op_cjneri & (r_sel < h_data)) |
                        (op_subbai & acc_sub_wrap[8]);
 
-   assign carry_upd  = sme0 & (op_clrc | op_cjneri | op_subbai); 
+   assign carry_upd  = sme0 & (op_clrc | op_cjneri | op_subbai | op_rlc); 
 
     always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)          carry <= 1'b0;
