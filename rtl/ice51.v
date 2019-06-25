@@ -291,12 +291,13 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
-   assign o_data_wr   = sme0 & (op_movda | op_movdi | op_movt1a);
+   assign o_data_wr   = sme0 & (op_movda | op_movdi | op_movt1a | (op_movd & (i_code_data > 8'h07)));
    assign o_data_addr = (op_movdt0)             ? r[0]:
                         (op_movdt1 | op_movt1a) ? r[1]:
                         (op_movdi  | op_movdd ) ? h_data:
                                                   i_code_data; 
-   assign o_data_data = (op_movdi) ? i_code_data:
+   assign o_data_data = (op_movd ) ? r_sel: 
+                        (op_movdi) ? i_code_data:
                                      acc;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
