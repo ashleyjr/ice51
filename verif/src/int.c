@@ -1,40 +1,31 @@
-#define LEN 21
-
 __xdata unsigned char * __code data = 0x201;
 __xdata unsigned char * __code cont = 0x200;
 
 void main (void){        
    int i;
-   for(i=-2;i<2;i++){
-      while(0x01 & *cont)  *data = i >> 24;
-      while(0x01 & *cont)  *data = i >> 16;
-      while(0x01 & *cont)  *data = i >> 8;
-      while(0x01 & *cont)  *data = i;
+   char a,b;
+   i = -2;
+   while(i < 3){ 
+      a = i >> 8;
+      b = i;
+      *data = a;  
+      while(0x01 & *cont);
+      *data = b;  
+      while(0x01 & *cont); 
+      i++;
    }
    
    while(1); 
 }
 
 // Check Uart:
+// 0xff
+// 0xfe
+// 0xff
+// 0xff
+// 0x00
+// 0x00
+// 0x00
 // 0x01
+// 0x00
 // 0x02
-// 0x04
-// 0x07
-// 0x0b
-// 0x10
-// 0x16
-// 0x1d
-// 0x25
-// 0x2e
-// 0x38
-// 0x43
-// 0x4f
-// 0x5c
-// 0x6a
-// 0x79
-// 0x89
-// 0x9a
-// 0xac
-// 0xbf
-// 0xd3
-// 0xe8
