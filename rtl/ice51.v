@@ -51,6 +51,7 @@ module ice51(
                XRLDA = 8'h62, // xrl d,a
                XRLDI = 8'h63, // xrl (direct), #imm
                XRLA  = 8'h64, // xrl a,#imm
+               JZ    = 8'h60, // jz 
                JNZ   = 8'h70, // jnz 
                MOVAI = 8'h74, // mov r?, #imm
                MOVDI = 8'h75, // mov direct, #imm
@@ -351,6 +352,7 @@ module ice51(
    assign op_jnc = (op == JNC);
    assign op_subbar = (op[7:3] == (SUBBAR >> 3));
    assign op_xrldi = (op == XRLDI); 
+   assign op_jz = (op == JZ); 
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
@@ -409,6 +411,8 @@ module ice51(
    assign pc_cjne_fwd = sme0 & op_cjneri & ~l_data[7] & (r_sel != h_data);
    assign pc_cjne_bck_twos = ~l_data[6:0];
 
+   assign pc_jz_fwd  = sme0 & op_jz & ~i_code_data[7] & (acc == 'd0);
+
    assign pc_inc     = (smd0  &  ~op_rlc & ~op_clrc & ~op_jc & ~op_jnc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_subbar & ~op_addar) | 
                        (smd1 & ~op_movrd) | 
                        (smf & uart_load_done);
@@ -423,6 +427,7 @@ module ice51(
                        (pc_jnc_fwd ) ? pc + h_data[6:0]:
                        (pc_cjne_bck) ? pc - pc_cjne_bck_twos - 'd1:
                        (pc_cjne_fwd) ? pc + l_data[6:0]:
+                       (pc_jz_fwd ) ? pc + i_code_data[6:0]:
                        (pc_inc    ) ? pc + 'd1 :
                                       pc;
 
