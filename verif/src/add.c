@@ -3,8 +3,8 @@
 void main (void){       
    char i;
    for(i=0x55;i<0x66;i++){
-      *d = i;
-      while(0x01 & *c);
+      *data = i;
+      while(0x01 & *cont);
    }
    while(1); 
 }
