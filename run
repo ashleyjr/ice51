@@ -26,6 +26,7 @@ if [[ "$1" == "$ALL" ]]; then
       echo -n -e " >\t\t\t"
       ext=".hex"
       cp -f ${filename/\.c/$ext} load_mem.hex
+      ext=".checks"
       cp -f ${filename/\.c/$ext} checks.hex
       iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
       vvp ice51.dat -vcd | grep "PASSED\|ERROR" 

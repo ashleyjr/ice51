@@ -66,15 +66,27 @@ module ice51_tb;
    endtask
 
    integer   j;
-   integer   rx_ptr;
-   integer   passed;
+   integer   rx_ptr; 
+   integer   exp_rx;
    reg [7:0] uart_tx;
    reg [7:0] rxs [0:CHECK_SIZE-1];
 
-   initial begin  
-      repeat(2) @(posedge i_nrst);
+   initial begin
+      // Expected rxs
+      j = 0;
+      exp_rx = 0;
+      while(1 == uart_checks[j][8]) begin
+         exp_rx = exp_rx + 1;
+         j = j + 1;
+      end
+      
+      // Wait for reset
+      repeat(2) 
+         @(posedge i_nrst);
+      
+      // Look for expected
       rx_ptr = 0;
-      while(1) begin 
+      while(rx_ptr != exp_rx) begin 
          uart_tx = 0; 
          while(o_uart_tx) 
             @(posedge i_clk); 
@@ -84,22 +96,23 @@ module ice51_tb;
          #SAMPLE_TB
          $display("UART RX: 0x%x (exp == 0x%x)",uart_tx,uart_checks[rx_ptr][7:0]); 
          rxs[rx_ptr] = uart_tx;
-         rx_ptr = rx_ptr + 1;
-         passed = 1;
-         for(j=0;j<CHECK_SIZE;j=j+1) begin
-            if(0 < (uart_checks[j] >> 8))
-               if(rxs[j] !== uart_checks[j][7:0])
-                  passed = 0; 
-         end 
-         if(passed == 1) begin
-            #(CLK_PERIOD_NS*200)
-            $display("PASSED");
+         rx_ptr = rx_ptr + 1; 
+      end
+
+      // Check no unwanted rxs
+      repeat(1000) begin
+         @(posedge i_clk);
+         if(!o_uart_tx) begin
+            $display("ERROR: Unexpected rx");
             $finish;
          end
       end
+
+      // All is well
+      $display("PASSED");
+      $finish;
    end
-
-
+   
    initial begin 
 					   i_uart_rx   = 1;
                   i_nrst		= 1;
@@ -107,8 +120,8 @@ module ice51_tb;
       #1000       i_nrst      = 1;
 
       `ifndef PRELOAD
-      for(i=0;i<MEM_SIZE;i=i+1)
-         #(SAMPLE_TB) uart_send(load_mem[i]);
+         for(i=0;i<MEM_SIZE;i=i+1)
+            #(SAMPLE_TB) uart_send(load_mem[i]);
       `endif
 
       #3000000
