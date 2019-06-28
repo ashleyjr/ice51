@@ -1,19 +1,18 @@
-__xdata unsigned char * __code d = 0x201;
-__xdata unsigned char * __code c = 0x200;
+#include "ice51.h"
 
 void main (void){       
    char i;
    unsigned char l,m;
    l = 1;
    m = 1;
-   *d = l;
+   *data = l;
    for(i=0;i<12;i++){
-      while(0x01 & *c);
+      while(0x01 & *cont);
       m = l + m;
       l = l ^ m;  // XOR swap
       m = l ^ m;
       l = l ^ m;
-      *d = m;
+      *data = m;
    }
    while(1); 
 }

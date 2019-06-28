@@ -1,7 +1,7 @@
-__xdata unsigned char * __code d = 0x201;
+#include "ice51.h"
 
 void main (void){      
-   *d = 0xBB;
+   *data = 0xBB;
    while(1); 
 }
 

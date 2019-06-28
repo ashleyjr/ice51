@@ -8,7 +8,7 @@ all: $(OBJ)
 
 %.ihx: %.c
 	python ../utils/output_checks.py $< 
-	$(CC) $<
+	$(CC) $< -I ../inc/
 	
 %.hex: %.ihx
 	python ../utils/output_hex.py $< > $@

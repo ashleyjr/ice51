@@ -1,5 +1,4 @@
-__xdata unsigned char * __code d = 0x201;
-__xdata unsigned char * __code c = 0x200;
+#include "ice51.h"
 
 void main (void){       
    char i;
