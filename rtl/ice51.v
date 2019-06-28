@@ -117,6 +117,7 @@ module ice51(
    
    // CODE
    wire  [7:0]                   op;
+   wire  [4:0]                   op5;
    reg   [7:0]                   op_latched;
    wire  [7:0]                   h_data;
    reg   [7:0]                   h_data_latched;
@@ -280,6 +281,7 @@ module ice51(
                         (uart_load_done  ) ?  pc : 
                                              uart_rx_count; 
    assign op          = (smd0) ? i_code_data : op_latched;
+   assign op5         = op[7:3];
    assign h_data      = (smd1) ? i_code_data : h_data_latched;
    assign l_data      = (smd2) ? i_code_data : l_data_latched;
    
@@ -313,46 +315,46 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
    
-   assign op_ljmp  = (op == LJMP);
-   assign op_movdi = (op == MOVDI);
-   assign op_lcall = (op == LCALL);
-   assign op_movad = (op == MOVAD);
-   assign op_sjmp  = (op == SJMP);
-   assign op_movdp = (op == MOVDP);
-   assign op_clra  = (op == CLRA);
-   assign op_movc  = (op == MOVC);
-   assign op_movra = (op[7:3] == (MOVRA >> 3));
-   assign op_movai = (op == MOVAI);
-   assign op_movd  = (op[7:3] == (MOVD >> 3));
+   assign op_ljmp    = (op == LJMP);
+   assign op_movdi   = (op == MOVDI);
+   assign op_lcall   = (op == LCALL);
+   assign op_movad   = (op == MOVAD);
+   assign op_sjmp    = (op == SJMP);
+   assign op_movdp   = (op == MOVDP);
+   assign op_clra    = (op == CLRA);
+   assign op_movc    = (op == MOVC);
+   assign op_movra   = (op5 == (MOVRA >> 3));
+   assign op_movai   = (op == MOVAI);
+   assign op_movd    = (op5  == (MOVD >> 3));
    assign op_movxda  = (op == MOVXDA);
    assign op_movxad  = (op == MOVXAD);
-   assign op_movar = (op[7:3] == (MOVAR >> 3));
-   assign op_jb = (op == JB);
-   assign op_incr = (op[7:3] == (INCR >> 3));
-   assign op_xrla = (op == XRLA); 
-   assign op_subbai = (op == SUBBAI);
-   assign op_movri = (op[7:3] == (MOVRI >> 3));
-   assign op_jc = (op == JC); 
-   assign op_addar = (op[7:3] == (ADDAR >> 3)); 
-   assign op_xrlda = (op == XRLDA); 
-   assign op_movda = (op == MOVDA);
-   assign op_addad = (op == ADDAD);
-   assign op_addai = (op == ADDAI);
-   assign op_deca = (op == DECA);
-   assign op_movdt0 = (op == MOVDT0);
-   assign op_movdt1 = (op == MOVDT1);
-   assign op_movt1a = (op == MOVT1A);
-   assign op_cjneri = (op[7:3] == (CJNERI >> 3));
-   assign op_clrc = (op == CLRC); 
-   assign op_jnb = (op == JNB);
-   assign op_rlc = (op == RLC);
-   assign op_subbad = (op == SUBBAD);
-   assign op_movrd = (op[7:3] == (MOVRD >> 3));
-   assign op_movdd = (op == MOVDD);
-   assign op_jnc = (op == JNC);
-   assign op_subbar = (op[7:3] == (SUBBAR >> 3));
-   assign op_xrldi = (op == XRLDI); 
-   assign op_jz = (op == JZ); 
+   assign op_movar   = (op5 == (MOVAR >> 3));
+   assign op_jb      = (op == JB);
+   assign op_incr    = (op5 == (INCR >> 3));
+   assign op_xrla    = (op == XRLA); 
+   assign op_subbai  = (op == SUBBAI);
+   assign op_movri   = (op5 == (MOVRI >> 3));
+   assign op_jc      = (op == JC); 
+   assign op_addar   = (op5 == (ADDAR >> 3)); 
+   assign op_xrlda   = (op == XRLDA); 
+   assign op_movda   = (op == MOVDA);
+   assign op_addad   = (op == ADDAD);
+   assign op_addai   = (op == ADDAI);
+   assign op_deca    = (op == DECA);
+   assign op_movdt0  = (op == MOVDT0);
+   assign op_movdt1  = (op == MOVDT1);
+   assign op_movt1a  = (op == MOVT1A);
+   assign op_cjneri  = (op5 == (CJNERI >> 3));
+   assign op_clrc    = (op == CLRC); 
+   assign op_jnb     = (op == JNB);
+   assign op_rlc     = (op == RLC);
+   assign op_subbad  = (op == SUBBAD);
+   assign op_movrd   = (op5 == (MOVRD >> 3));
+   assign op_movdd   = (op == MOVDD);
+   assign op_jnc     = (op == JNC);
+   assign op_subbar  = (op5 == (SUBBAR >> 3));
+   assign op_xrldi   = (op == XRLDI); 
+   assign op_jz      = (op == JZ); 
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
@@ -479,22 +481,22 @@ module ice51(
 
    assign acc_subbad_wrap = (acc - b - carry);
    
-   assign acc_next = (sme0 & op_subbad & (i_code_data == BB)) ? acc_subbad_wrap[7:0]:
-                     (sme0 & op_rlc                         ) ? {acc[6:0], carry}:
-                     (sme0 & op_addai                       ) ? (acc + i_code_data):
-                     (sme0 & op_addad                       ) ? (acc + i_data_data):
-                     (sme0 & op_movad                       ) ? i_data_data:
-                     (sme0 & op_xrla                        ) ? (acc ^ h_data):
-                     (sme0 & op_subbai                      ) ? acc_sub_wrap[7:0]:
-                     (sme0 & op_subbar                      ) ? acc_subbar_wrap[7:0]:
-                     (sme0 & op_subbad & (i_code_data == ACC)) ? (8'h00 - carry):
-                     (sme0 & (op[7:3] == (MOVAR >> 3))      ) ? r_sel:
-                     (sme0 & op_addar                      ) ? acc + r_sel:
-                     (sme0 & op_deca                        ) ? acc - 'd1:
-                     (sme0 & (op      == CLRA        )      ) ? 'd0:                                 
-                     (sme0 & (op_movc | op_movai)           ) ? i_code_data:
-                     (sme0 & op_movxad & (dptr == 16'h200)  ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
-                                                               acc;
+   assign acc_next = (sme0 & op_subbad & (i_code_data == BB)   ) ? acc_subbad_wrap[7:0]:
+                     (sme0 & op_rlc                            ) ? {acc[6:0], carry}:
+                     (sme0 & op_addai                          ) ? (acc + i_code_data):
+                     (sme0 & op_addad                          ) ? (acc + i_data_data):
+                     (sme0 & op_movad                          ) ? i_data_data:
+                     (sme0 & op_xrla                           ) ? (acc ^ h_data):
+                     (sme0 & op_subbai                         ) ? acc_sub_wrap[7:0]:
+                     (sme0 & op_subbar                         ) ? acc_subbar_wrap[7:0]:
+                     (sme0 & op_subbad & (i_code_data == ACC)  ) ? (8'h00 - carry):
+                     (sme0 & op_movar                          ) ? r_sel:
+                     (sme0 & op_addar                          ) ? acc + r_sel:
+                     (sme0 & op_deca                           ) ? acc - 'd1:
+                     (sme0 & op_clra                           ) ? 'd0:                                 
+                     (sme0 & (op_movc | op_movai)              ) ? i_code_data:
+                     (sme0 & op_movxad & (dptr == 16'h200)     ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
+                                                                   acc;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    acc <= 'd0;
