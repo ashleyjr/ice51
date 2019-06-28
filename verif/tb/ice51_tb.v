@@ -103,6 +103,8 @@ module ice51_tb;
       repeat(1000) begin
          @(posedge i_clk);
          if(!o_uart_tx) begin
+            repeat(1000)
+               @(posedge i_clk);     
             $display("ERROR: Unexpected rx");
             $finish;
          end

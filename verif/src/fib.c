@@ -7,7 +7,7 @@ void main (void){
    l = 1;
    m = 1;
    *d = l;
-   for(i=0;i<13;i++){
+   for(i=0;i<12;i++){
       while(0x01 & *c);
       m = l + m;
       l = l ^ m;  // XOR swap
