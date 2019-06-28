@@ -95,6 +95,14 @@ module ice51_tb;
          end 
          #SAMPLE_TB
          $display("UART RX: 0x%x (exp == 0x%x)",uart_tx,uart_checks[rx_ptr][7:0]); 
+         
+         if(uart_tx != uart_checks[rx_ptr][7:0]) begin
+            repeat(1000)
+               @(posedge i_clk);
+            $display("ERROR: Unexpected rx");
+            $finish;
+         end
+         
          rxs[rx_ptr] = uart_tx;
          rx_ptr = rx_ptr + 1; 
       end
@@ -105,7 +113,7 @@ module ice51_tb;
          if(!o_uart_tx) begin
             repeat(1000)
                @(posedge i_clk);     
-            $display("ERROR: Unexpected rx");
+            $display("ERROR: Unwanted rx");
             $finish;
          end
       end
