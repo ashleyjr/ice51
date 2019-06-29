@@ -66,6 +66,7 @@ module ice51(
                SUBBAI= 8'h94, // subb a,#imm
                SUBBAD= 8'h95, // subb a, direct
                SUBBAR= 8'h98, // subb a, r?
+               MUL   = 8'hA4, // mul
                MOVRD = 8'hA8, // mov r, (direct)
                CJNERI= 8'hB8, // cjne r?, #imm, offset
                CLRC  = 8'hC3, // clr c
@@ -163,6 +164,9 @@ module ice51(
    // B
    reg   [7:0]                   b;
    wire  [7:0]                   b_next;
+
+   // Mul
+   wire  [15:0]                  mul_ab;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // UART RX
@@ -355,7 +359,8 @@ module ice51(
    assign op_subbar  = (op5 == (SUBBAR >> 3));
    assign op_xrldi   = (op == XRLDI); 
    assign op_jz      = (op == JZ); 
-   
+   assign op_mul     = (op == MUL);
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
 
@@ -415,7 +420,7 @@ module ice51(
 
    assign pc_jz_fwd  = sme0 & op_jz & ~i_code_data[7] & (acc == 'd0);
 
-   assign pc_inc     = (smd0  &  ~op_rlc & ~op_clrc & ~op_jc & ~op_jnc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_subbar & ~op_addar) | 
+   assign pc_inc     = (smd0  &  ~op_mul & ~op_rlc & ~op_clrc & ~op_jc & ~op_jnc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_subbar & ~op_addar) | 
                        (smd1 & ~op_movrd) | 
                        (smf & uart_load_done);
    assign pc_next    = (pc_jnb)     ? pc + l_data:
@@ -481,7 +486,8 @@ module ice51(
 
    assign acc_subbad_wrap = (acc - b - carry);
    
-   assign acc_next = (sme0 & op_subbad & (i_code_data == BB)   ) ? acc_subbad_wrap[7:0]:
+   assign acc_next = (sme0 & op_mul                            ) ? mul_ab[7:0]:
+                     (sme0 & op_subbad & (i_code_data == BB)   ) ? acc_subbad_wrap[7:0]:
                      (sme0 & op_rlc                            ) ? {acc[6:0], carry}:
                      (sme0 & op_addai                          ) ? (acc + i_code_data):
                      (sme0 & op_addad                          ) ? (acc + i_data_data):
@@ -538,8 +544,9 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // B
  
-   assign b_next = (sme0 & op_movd & (i_code_data == BB))  ? r_sel:
-                   (sme0 & op_xrldi & (h_data == BB))      ? b ^ l_data:
+   assign b_next = (sme0 & op_mul                        ) ? mul_ab[15:8]:
+                   (sme0 & op_movd & (i_code_data == BB) ) ? r_sel:
+                   (sme0 & op_xrldi & (h_data == BB)     ) ? b ^ l_data:
                                                              b;
 
    always@(posedge i_clk or negedge i_nrst) begin
@@ -547,5 +554,9 @@ module ice51(
       else           b <= b_next;
    end
    
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////
+   // MUL
 
+   assign mul_ab = acc * b;
+   
 endmodule

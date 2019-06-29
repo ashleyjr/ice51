@@ -8,16 +8,25 @@ if "__main__" == __name__:
     found = False
     checks = 0
     for j in f.read().split('\n'):
+        if found:
 
-        # Values
-        if found and ("0x" in j):
-            g.write("1"+j.split("0x")[1].lower() + "\n")
-            checks = checks + 1
-        # Chars
-        if found and ("\'" in j):
-            c = j.split("\'")[1]
-            c =str(hex(ord(c)))[2:4]
-            g.write("1"+c.lower() + "\n")
+            # Hex
+            if ("0x" in j):
+                g.write("1"+j.split("0x")[1].lower() + "\n")
+
+            # Chars
+            elif found and ("\'" in j):
+                c = j.split("\'")[1]
+                c =str(hex(ord(c)))[2:4]
+                g.write("1"+c.lower() + "\n")
+
+            # Dec
+            else:
+                if "//" in j:
+                    d = j.replace("//","")
+                    d = str(hex(int(d)))[2:4]
+                    g.write("1" + d + "\n")
+
             checks = checks + 1
 
         if "// Check Uart" in j:
