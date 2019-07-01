@@ -430,9 +430,32 @@ module ice51(
 
    assign pc_jz_fwd  = sme & op_jz & ~i_code_data[7] & (acc == 'd0);
 
-   assign pc_inc     = (smd0  &  ~op_mul & ~op_rlc & ~op_clrc & ~op_jc & ~op_jnc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_subbar & ~op_addar) | 
-                       (smd1 & ~op_movrd) | 
-                       (smf & uart_load_done);
+   assign pc_inc     = (smd1 & ~op_movrd)       | 
+                       (smf & uart_load_done)   |
+                       (smd0  & ~(  op_mul      | 
+                                    op_rlc      |
+                                    op_clrc     |
+                                    op_jc       |
+                                    op_jnc      |
+                                    op_incr     |
+                                    op_movt1a   |
+                                    op_movdt0   |
+                                    op_movdt1   |
+                                    op_deca     |
+                                    op_movri    |
+                                    op_clra     |
+                                    op_movad    |
+                                    op_movc     |
+                                    op_addad    |
+                                    op_movra    |
+                                    op_movxda   |
+                                    op_movxad   |
+                                    op_movar    |
+                                    op_xrla     |
+                                    op_subbai   |
+                                    op_subbar   |
+                                    op_addar   ));
+                       
    assign pc_next    = (pc_jnb)     ? pc + l_data:
                        (pc_bck    ) ? pc - pc_twos - 'd1:
                        (pc_replace) ? {h_data,l_data}:
