@@ -31,9 +31,7 @@ module ice51(
                SM_DECODE0  = 3'd1,
                SM_DECODE1  = 3'd2,
                SM_DECODE2  = 3'd3,
-               SM_EXECUTE0 = 3'd4,
-               SM_EXECUTE1 = 3'd5,
-               SM_EXECUTE2 = 3'd6;
+               SM_EXECUTE  = 3'd4;
 
    // OPCODES
    parameter   LJMP  = 8'h02, // ljmp addr16
@@ -232,7 +230,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // UART TX
 
-   assign uart_tx_start = (sme0 & op_movxda & (dptr == 16'h0201));
+   assign uart_tx_start = (sme & op_movxda & (dptr == 16'h0201));
    assign uart_tx_shift = (uart_tx_state == SM_UART_TX_SEND) & uart_tx_sample;
    assign uart_tx_next  = (uart_tx_start) ? o_data_data:
                           (uart_tx_shift) ? {uart_tx[6:0],1'b1}:
@@ -307,7 +305,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
-   assign o_data_wr   = sme0 & (op_movda | op_movdi | op_movt1a | (op_movd & (i_code_data > 8'h07)));
+   assign o_data_wr   = sme & (op_movda | op_movdi | op_movt1a | (op_movd & (i_code_data > 8'h07)));
    assign o_data_addr = (op_movdt0)             ? r[0]:
                         (op_movdt1 | op_movt1a) ? r[1]:
                         (op_movdi  | op_movdd ) ? h_data:
@@ -368,26 +366,38 @@ module ice51(
    assign smd0 = (state == SM_DECODE0);
    assign smd1 = (state == SM_DECODE1);
    assign smd2 = (state == SM_DECODE2);
-   assign sme0 = (state == SM_EXECUTE0);
-   assign sme1 = (state == SM_EXECUTE1);
-   assign sme2 = (state == SM_EXECUTE2);
+   assign sme  = (state == SM_EXECUTE); 
    assign smj  = (state == SM_JUMP);
   
-   assign d1 = op_xrla | op_subbai | op_movri | op_jnc | op_jc | op_movad | op_addad | op_movdi | op_movdt0 | op_movdt1 | op_movrd;
-   assign d3 = op_jnb | op_ljmp | op_movdp | op_jb | op_cjneri | op_movdd | op_xrldi;
-   assign e3 = 1'b0;
+   assign d1 = op_xrla   | 
+               op_subbai | 
+               op_movri  | 
+               op_jnc    | 
+               op_jc     | 
+               op_movad  | 
+               op_addad  | 
+               op_movdi  | 
+               op_movdt0 | 
+               op_movdt1 | 
+               op_movrd;
+   
+   assign d3 = op_jnb    | 
+               op_ljmp   | 
+               op_movdp  | 
+               op_jb     | 
+               op_cjneri | 
+               op_movdd  | 
+               op_xrldi;
+   
 
-   assign state_next = (smf  & uart_load_done     ) ? SM_DECODE0:  
-                       (smd0 & (d3 | d1)          ) ? SM_DECODE1:  
-                       (smd0                      ) ? SM_EXECUTE0:  
-                       (smd1 & d3                 ) ? SM_DECODE2:  
-                       (smd1                      ) ? SM_EXECUTE0:  
-                       (smd2                      ) ? SM_EXECUTE0:
-                       (sme0 & e3                 ) ? SM_EXECUTE1:
-                       (sme0                      ) ? SM_FETCH:
-                       (sme1 & e3                 ) ? SM_EXECUTE2:
-                       (sme2                      ) ? SM_FETCH:
-                                                      state;
+   assign state_next = (smf  & uart_load_done   ) ? SM_DECODE0:  
+                       (smd0 & (d3 | d1)        ) ? SM_DECODE1:  
+                       (smd0                    ) ? SM_EXECUTE:  
+                       (smd1 & d3               ) ? SM_DECODE2:  
+                       (smd1                    ) ? SM_EXECUTE:  
+                       (smd2                    ) ? SM_EXECUTE: 
+                       (sme                     ) ? SM_FETCH: 
+                                                    state;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst) state  <= 'd0;
@@ -398,27 +408,27 @@ module ice51(
    // PROGRAM COUNTER
    
    assign pc_twos    = ~i_code_data[6:0];
-   assign pc_bck     = sme0 & op_sjmp & i_code_data[7];
-   assign pc_fwd     = sme0 & op_sjmp & ~i_code_data[7];
-   assign pc_replace = sme0 & op_ljmp;
+   assign pc_bck     = sme & op_sjmp & i_code_data[7];
+   assign pc_fwd     = sme & op_sjmp & ~i_code_data[7];
+   assign pc_replace = sme & op_ljmp;
    
-   assign pc_jb_bck  = sme0 & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7];
+   assign pc_jb_bck  = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7];
    assign pc_jb_bck_twos = ~l_data[6:0];
-   assign pc_jb_fwd  = sme0 & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
+   assign pc_jb_fwd  = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
   
-   assign pc_jnb     = sme0 & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
+   assign pc_jnb     = sme & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
    
-   assign pc_jc_bck  = sme0 & op_jc & carry & h_data[7];
-   assign pc_jc_fwd  = sme0 & op_jc & carry & ~h_data[7];
-   assign pc_jnc_bck = sme0 & op_jnc & ~carry & h_data[7];
-   assign pc_jnc_fwd = sme0 & op_jnc & ~carry & ~h_data[7]; 
+   assign pc_jc_bck  = sme & op_jc & carry & h_data[7];
+   assign pc_jc_fwd  = sme & op_jc & carry & ~h_data[7];
+   assign pc_jnc_bck = sme & op_jnc & ~carry & h_data[7];
+   assign pc_jnc_fwd = sme & op_jnc & ~carry & ~h_data[7]; 
    assign pc_jc_bck_twos = ~h_data[6:0];
    
-   assign pc_cjne_bck = sme0 & op_cjneri & l_data[7]  & (r_sel != h_data);
-   assign pc_cjne_fwd = sme0 & op_cjneri & ~l_data[7] & (r_sel != h_data);
+   assign pc_cjne_bck = sme & op_cjneri & l_data[7]  & (r_sel != h_data);
+   assign pc_cjne_fwd = sme & op_cjneri & ~l_data[7] & (r_sel != h_data);
    assign pc_cjne_bck_twos = ~l_data[6:0];
 
-   assign pc_jz_fwd  = sme0 & op_jz & ~i_code_data[7] & (acc == 'd0);
+   assign pc_jz_fwd  = sme & op_jz & ~i_code_data[7] & (acc == 'd0);
 
    assign pc_inc     = (smd0  &  ~op_mul & ~op_rlc & ~op_clrc & ~op_jc & ~op_jnc & ~op_incr & ~op_movt1a &  ~op_movdt0  & ~op_movdt1 & ~op_deca & ~op_movri & ~op_clra & ~op_movad & ~op_movc & ~op_addad & ~op_movra & ~op_movxda & ~op_movxad & ~op_movar & ~op_xrla & ~op_subbai & ~op_subbar & ~op_addar) | 
                        (smd1 & ~op_movrd) | 
@@ -453,7 +463,7 @@ module ice51(
                    op_movra                           ? acc: 
                                                         r_sel;
    
-   assign r_upd  = sme0 & (op_movra | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1 | op_movrd | 
+   assign r_upd  = sme & (op_movra | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1 | op_movrd | 
                           (op_movd & (i_code_data < 8'h08)));
      
    assign r_index =  (op_movdt0 | op_movdt1) ? h_data[2:0]:
@@ -486,22 +496,22 @@ module ice51(
 
    assign acc_subbad_wrap = (acc - b - carry);
    
-   assign acc_next = (sme0 & op_mul                            ) ? mul_ab[7:0]:
-                     (sme0 & op_subbad & (i_code_data == BB)   ) ? acc_subbad_wrap[7:0]:
-                     (sme0 & op_rlc                            ) ? {acc[6:0], carry}:
-                     (sme0 & op_addai                          ) ? (acc + i_code_data):
-                     (sme0 & op_addad                          ) ? (acc + i_data_data):
-                     (sme0 & op_movad                          ) ? i_data_data:
-                     (sme0 & op_xrla                           ) ? (acc ^ h_data):
-                     (sme0 & op_subbai                         ) ? acc_sub_wrap[7:0]:
-                     (sme0 & op_subbar                         ) ? acc_subbar_wrap[7:0]:
-                     (sme0 & op_subbad & (i_code_data == ACC)  ) ? (8'h00 - carry):
-                     (sme0 & op_movar                          ) ? r_sel:
-                     (sme0 & op_addar                          ) ? acc + r_sel:
-                     (sme0 & op_deca                           ) ? acc - 'd1:
-                     (sme0 & op_clra                           ) ? 'd0:                                 
-                     (sme0 & (op_movc | op_movai)              ) ? i_code_data:
-                     (sme0 & op_movxad & (dptr == 16'h200)     ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
+   assign acc_next = (sme & op_mul                            ) ? mul_ab[7:0]:
+                     (sme & op_subbad & (i_code_data == BB)   ) ? acc_subbad_wrap[7:0]:
+                     (sme & op_rlc                            ) ? {acc[6:0], carry}:
+                     (sme & op_addai                          ) ? (acc + i_code_data):
+                     (sme & op_addad                          ) ? (acc + i_data_data):
+                     (sme & op_movad                          ) ? i_data_data:
+                     (sme & op_xrla                           ) ? (acc ^ h_data):
+                     (sme & op_subbai                         ) ? acc_sub_wrap[7:0]:
+                     (sme & op_subbar                         ) ? acc_subbar_wrap[7:0]:
+                     (sme & op_subbad & (i_code_data == ACC)  ) ? (8'h00 - carry):
+                     (sme & op_movar                          ) ? r_sel:
+                     (sme & op_addar                          ) ? acc + r_sel:
+                     (sme & op_deca                           ) ? acc - 'd1:
+                     (sme & op_clra                           ) ? 'd0:                                 
+                     (sme & (op_movc | op_movai)              ) ? i_code_data:
+                     (sme & op_movxad & (dptr == 16'h200)     ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
                                                                    acc;
 
    always@(posedge i_clk or negedge i_nrst) begin
@@ -512,11 +522,11 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DPTR
    
-   assign dptr_next = (sme0 & op_movdp)                        ? {h_data,l_data}:
-                      (sme0 & op_movd  & (i_code_data == DPL)) ? {dptr[15:8], r_sel}:
-                      (sme0 & op_movd  & (i_code_data == DPH)) ? {r_sel,      dptr[7:0]}:
-                      (sme0 & op_movdd & (l_data == DPL))      ? {dptr[15:8], i_data_data}:
-                      (sme0 & op_movdd & (l_data == DPH))      ? {i_data_data,dptr[7:0]}:                                          
+   assign dptr_next = (sme & op_movdp)                        ? {h_data,l_data}:
+                      (sme & op_movd  & (i_code_data == DPL)) ? {dptr[15:8], r_sel}:
+                      (sme & op_movd  & (i_code_data == DPH)) ? {r_sel,      dptr[7:0]}:
+                      (sme & op_movdd & (l_data == DPL))      ? {dptr[15:8], i_data_data}:
+                      (sme & op_movdd & (l_data == DPH))      ? {i_data_data,dptr[7:0]}:                                          
                                                                  dptr;
 
    always@(posedge i_clk or negedge i_nrst) begin
@@ -534,7 +544,7 @@ module ice51(
                        (op_subbar & acc_subbar_wrap[8]) |
                        (op_subbai & acc_sub_wrap[8]);
 
-   assign carry_upd  = sme0 & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad); 
+   assign carry_upd  = sme & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad); 
 
     always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)          carry <= 1'b0;
@@ -544,9 +554,9 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // B
  
-   assign b_next = (sme0 & op_mul                        ) ? mul_ab[15:8]:
-                   (sme0 & op_movd & (i_code_data == BB) ) ? r_sel:
-                   (sme0 & op_xrldi & (h_data == BB)     ) ? b ^ l_data:
+   assign b_next = (sme & op_mul                        ) ? mul_ab[15:8]:
+                   (sme & op_movd & (i_code_data == BB) ) ? r_sel:
+                   (sme & op_xrldi & (h_data == BB)     ) ? b ^ l_data:
                                                              b;
 
    always@(posedge i_clk or negedge i_nrst) begin
