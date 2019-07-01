@@ -122,6 +122,7 @@ module ice51(
    reg   [7:0]                   h_data_latched;
    wire  [7:0]                   l_data;
    reg   [7:0]                   l_data_latched;
+   wire  [15:0]                  hl_data;
 
    // STATE
    reg   [2:0]                   state;
@@ -301,7 +302,9 @@ module ice51(
       if(!i_nrst) l_data_latched <= 'd0;
       else        l_data_latched <= l_data;
    end
-   
+  
+   assign hl_data = {h_data,l_data};
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
@@ -456,20 +459,20 @@ module ice51(
                                     op_subbar   |
                                     op_addar   ));
                        
-   assign pc_next    = (pc_jnb)     ? pc + l_data:
-                       (pc_bck    ) ? pc - pc_twos - 'd1:
-                       (pc_replace) ? {h_data,l_data}:
-                       (pc_jb_bck ) ? pc - pc_jb_bck_twos - 'd1:
-                       (pc_jb_fwd ) ? pc + l_data[6:0]:
-                       (pc_jc_bck ) ? pc - pc_jc_bck_twos - 'd1:
-                       (pc_jc_fwd ) ? pc + h_data[6:0] - 'd2:
-                       (pc_jnc_bck ) ? pc - pc_jc_bck_twos - 'd1:
-                       (pc_jnc_fwd ) ? pc + h_data[6:0]:
-                       (pc_cjne_bck) ? pc - pc_cjne_bck_twos - 'd1:
-                       (pc_cjne_fwd) ? pc + l_data[6:0]:
-                       (pc_jz_fwd ) ? pc + i_code_data[6:0]:
-                       (pc_inc    ) ? pc + 'd1 :
-                                      pc;
+   assign pc_next    = (pc_jnb      ) ? pc + l_data:
+                       (pc_bck      ) ? pc - pc_twos - 'd1:
+                       (pc_replace  ) ? hl_data:
+                       (pc_jb_bck   ) ? pc - pc_jb_bck_twos - 'd1:
+                       (pc_jb_fwd   ) ? pc + l_data[6:0]:
+                       (pc_jc_bck   ) ? pc - pc_jc_bck_twos - 'd1:
+                       (pc_jc_fwd   ) ? pc + h_data[6:0] - 'd2:
+                       (pc_jnc_bck  ) ? pc - pc_jc_bck_twos - 'd1:
+                       (pc_jnc_fwd  ) ? pc + h_data[6:0]:
+                       (pc_cjne_bck ) ? pc - pc_cjne_bck_twos - 'd1:
+                       (pc_cjne_fwd ) ? pc + l_data[6:0]:
+                       (pc_jz_fwd   ) ? pc + i_code_data[6:0]:
+                       (pc_inc      ) ? pc + 'd1 :
+                                        pc;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst) pc  <= 'd3;
@@ -545,7 +548,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DPTR
    
-   assign dptr_next = (op_movdp)                        ? {h_data,l_data}:
+   assign dptr_next = (op_movdp)                        ? hl_data:
                       (op_movd  & (i_code_data == DPL)) ? {dptr[15:8], r_sel}:
                       (op_movd  & (i_code_data == DPH)) ? {r_sel,      dptr[7:0]}:
                       (op_movdd & (l_data == DPL))      ? {dptr[15:8], i_data_data}:
@@ -590,6 +593,6 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // MUL
 
-   assign mul_ab = acc * b;
+   assign mul_ab = 'd0;//acc * b;
    
 endmodule
