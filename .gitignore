@@ -11,3 +11,6 @@
 *.sym
 *.dat
 *.vcd
+*.log
+*.blif
+*.syn.v
