@@ -320,7 +320,7 @@ module ice51(
                                      acc;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
-   // STATE
+   // OPS
    
    assign op_ljmp    = (op == LJMP);
    assign op_movdi   = (op == MOVDI);
@@ -363,6 +363,12 @@ module ice51(
    assign op_xrldi   = (op == XRLDI); 
    assign op_jz      = (op == JZ); 
    assign op_mul     = (op == MUL);
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////
+   // DIRECTS
+   
+   assign d_bb  = (i_code_data == BB);
+   assign d_acc = (i_code_data == ACC);
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // STATE
@@ -525,7 +531,7 @@ module ice51(
    assign acc_subbad_wrap = (acc - b - carry);
    
    assign acc_next = (op_mul                            ) ? mul_ab[7:0]:
-                     (op_subbad & (i_code_data == BB)   ) ? acc_subbad_wrap[7:0]:
+                     (op_subbad & d_bb                  ) ? acc_subbad_wrap[7:0]:
                      (op_rlc                            ) ? {acc[6:0], carry}:
                      (op_addai                          ) ? (acc + i_code_data):
                      (op_addad                          ) ? (acc + i_data_data):
@@ -533,7 +539,7 @@ module ice51(
                      (op_xrla                           ) ? (acc ^ h_data):
                      (op_subbai                         ) ? acc_sub_wrap[7:0]:
                      (op_subbar                         ) ? acc_subbar_wrap[7:0]:
-                     (op_subbad & (i_code_data == ACC)  ) ? (8'h00 - carry):
+                     (op_subbad & d_acc                 ) ? (8'h00 - carry):
                      (op_movar                          ) ? r_sel:
                      (op_addar                          ) ? acc + r_sel:
                      (op_deca                           ) ? acc - 'd1:
@@ -568,8 +574,8 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // CARRY
   
-   assign carry_next = (op_subbad & carry & (i_code_data == ACC)) |
-                       (op_subbad & acc_subbad_wrap[8] & (i_code_data == BB)) |
+   assign carry_next = (op_subbad & carry & d_acc) |
+                       (op_subbad & acc_subbad_wrap[8] & d_bb) |
                        (op_rlc & acc[7]) |
                        (op_cjneri & (r_sel < h_data)) |
                        (op_subbar & acc_subbar_wrap[8]) |
