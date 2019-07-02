@@ -131,11 +131,12 @@ module ice51(
    // PROGRAM COUNTER
    reg   [8:0]                   pc;
    wire  [8:0]                   pc_next;
-   wire  [6:0]                   pc_twos;
-   wire  [6:0]                   pc_jb_bck_twos;
-   wire  [6:0]                   pc_jc_bck_twos;
-   wire  [6:0]                   pc_cjne_bck_twos;
-
+   wire  [6:0]                   pc_twos;  
+   wire  [6:0]                   pc_n_l_data7;
+   wire  [6:0]                   pc_n_h_data7;
+   wire  [8:0]                   pc_bck_l_data;
+   wire  [8:0]                   pc_bck_h_data;
+   
    // REGS
    wire                          r_upd;
    reg   [7:0]                   r[7:0];
@@ -409,29 +410,33 @@ module ice51(
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // PROGRAM COUNTER
-   
-   assign pc_twos    = ~i_code_data[6:0];
-   assign pc_bck     = sme & op_sjmp & i_code_data[7];
-   assign pc_fwd     = sme & op_sjmp & ~i_code_data[7];
-   assign pc_replace = sme & op_ljmp;
-   
-   assign pc_jb_bck  = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7];
-   assign pc_jb_bck_twos = ~l_data[6:0];
-   assign pc_jb_fwd  = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
   
-   assign pc_jnb     = sme & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
+   assign pc_n_l_data7     = ~l_data[6:0];
+   assign pc_n_h_data7     = ~h_data[6:0];
+   assign pc_twos          = ~i_code_data[6:0];
    
-   assign pc_jc_bck  = sme & op_jc & carry & h_data[7];
-   assign pc_jc_fwd  = sme & op_jc & carry & ~h_data[7];
-   assign pc_jnc_bck = sme & op_jnc & ~carry & h_data[7];
-   assign pc_jnc_fwd = sme & op_jnc & ~carry & ~h_data[7]; 
-   assign pc_jc_bck_twos = ~h_data[6:0];
+   assign pc_bck_l_data    = pc - pc_n_l_data7 - 'd1;
+   assign pc_bck_h_data    = pc - pc_n_h_data7 - 'd1;
    
-   assign pc_cjne_bck = sme & op_cjneri & l_data[7]  & (r_sel != h_data);
-   assign pc_cjne_fwd = sme & op_cjneri & ~l_data[7] & (r_sel != h_data);
-   assign pc_cjne_bck_twos = ~l_data[6:0];
+   assign pc_bck           = sme & op_sjmp & i_code_data[7];
+   assign pc_fwd           = sme & op_sjmp & ~i_code_data[7];
+   
+   assign pc_replace       = sme & op_ljmp;
+   
+   assign pc_jb_bck        = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7]; 
+   assign pc_jb_fwd        = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
+  
+   assign pc_jnb           = sme & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
+   
+   assign pc_jc_bck        = sme & op_jc & carry & h_data[7];
+   assign pc_jc_fwd        = sme & op_jc & carry & ~h_data[7];
+   assign pc_jnc_bck       = sme & op_jnc & ~carry & h_data[7];
+   assign pc_jnc_fwd       = sme & op_jnc & ~carry & ~h_data[7];  
+   
+   assign pc_cjne_bck      = sme & op_cjneri & l_data[7]  & (r_sel != h_data);
+   assign pc_cjne_fwd      = sme & op_cjneri & ~l_data[7] & (r_sel != h_data); 
 
-   assign pc_jz_fwd  = sme & op_jz & ~i_code_data[7] & (acc == 'd0);
+   assign pc_jz_fwd        = sme & op_jz & ~i_code_data[7] & (acc == 'd0);
 
    assign pc_inc     = (smd1 & ~op_movrd)       | 
                        (smf & uart_load_done)   |
@@ -459,24 +464,20 @@ module ice51(
                                     op_subbar   |
                                     op_addar   ));
                        
-   assign pc_next    = (pc_jnb      ) ? pc + l_data:
-                       (pc_bck      ) ? pc - pc_twos - 'd1:
-                       (pc_replace  ) ? hl_data:
-                       (pc_jb_bck   ) ? pc - pc_jb_bck_twos - 'd1:
-                       (pc_jb_fwd   ) ? pc + l_data[6:0]:
-                       (pc_jc_bck   ) ? pc - pc_jc_bck_twos - 'd1:
-                       (pc_jc_fwd   ) ? pc + h_data[6:0] - 'd2:
-                       (pc_jnc_bck  ) ? pc - pc_jc_bck_twos - 'd1:
-                       (pc_jnc_fwd  ) ? pc + h_data[6:0]:
-                       (pc_cjne_bck ) ? pc - pc_cjne_bck_twos - 'd1:
-                       (pc_cjne_fwd ) ? pc + l_data[6:0]:
-                       (pc_jz_fwd   ) ? pc + i_code_data[6:0]:
-                       (pc_inc      ) ? pc + 'd1 :
-                                        pc;
+   assign pc_next    = (pc_jnb | pc_jb_fwd | pc_cjne_fwd ) ? pc + l_data[6:0]:
+                       (pc_bck                           ) ? pc - pc_twos - 'd1:
+                       (pc_replace                       ) ? hl_data:
+                       (pc_jb_bck | pc_cjne_bck          ) ? pc_bck_l_data:
+                       (pc_jc_bck | pc_jnc_bck           ) ? pc_bck_h_data: 
+                       (pc_jc_fwd                        ) ? pc + h_data[6:0] - 'd2: 
+                       (pc_jnc_fwd                       ) ? pc + h_data[6:0]:  
+                       (pc_jz_fwd                        ) ? pc + i_code_data[6:0]:
+                       (pc_inc                           ) ? pc + 'd1 :
+                                                             pc;
 
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst) pc  <= 'd3;
-      else        pc  <= pc_next;
+      if(!i_nrst)    pc  <= 'd3;
+      else           pc  <= pc_next;
    end
     
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
