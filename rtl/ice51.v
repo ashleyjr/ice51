@@ -35,6 +35,7 @@ module ice51(
 
    // OPCODES
    parameter   LJMP  = 8'h02, // ljmp addr16
+               INCA  = 8'h04, // inc a
                INCR  = 8'h08, // inc r?
                LCALL = 8'h12, // lcall addr16
                DECA  = 8'h14, // dec a
@@ -87,7 +88,8 @@ module ice51(
                BB    = 8'hF0;
   
    // BIT
-   parameter   BIT_ACC = 8'hE0;
+   parameter   BIT_F0 = 8'hD5,
+               BIT_ACC = 8'hE0;
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // SIGNALS
@@ -170,6 +172,10 @@ module ice51(
    // B
    reg   [7:0]                   b;
    wire  [7:0]                   b_next;
+
+   // F
+   reg                           f;
+   wire                          f_next;
 
    // DIV MUL
    wire  [7:0]                   quo_ab;
@@ -372,6 +378,7 @@ module ice51(
    assign op_div     = (op == DIV);
    assign op_cpla    = (op == CPLA);
    assign op_decr    = (op5 == (DECR >> 3));
+   assign op_inca    = (op == INCA);
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DIRECTS
@@ -442,7 +449,10 @@ module ice51(
    assign pc_jb_bck        = pc_jb & l_data[7]; 
    assign pc_jb_fwd        = pc_jb & ~l_data[7];
   
-   assign pc_jnb           = sme & op_jnb & (~acc[h_data[2:0]] & (h_data[7:3] == (BIT_ACC >> 3)));
+   assign pc_jnb           = sme & op_jnb & (
+                              (~acc[h_data[2:0]] & (h_data[7:3] == (BIT_ACC >> 3))) |
+                              ((f == 1'b0) & (h_data == BIT_F0))  
+                           );
   
    assign pc_jc            = sme & op_jc & carry;
    assign pc_jc_bck        = pc_jc & h_data[7];
@@ -473,6 +483,7 @@ module ice51(
                                     op_movdt1   |
                                     op_cpla     |
                                     op_deca     |
+                                    op_inca     |
                                     op_movri    |
                                     op_clra     |
                                     op_movad    |
@@ -550,6 +561,7 @@ module ice51(
    assign acc_add = (op_addai) ? i_code_data : 
                     (op_addad) ? i_data_data :
                     (op_addar) ? r_sel:
+                    (op_inca ) ? 'd1:
                                  8'h00;
 
    assign acc_add_wrap = acc + acc_add;
@@ -597,11 +609,11 @@ module ice51(
   
    assign carry_next = (op_subbad & carry & d_acc) |
                        (((op_subbad & d_bb) | op_subbar | op_subbai) & acc_sub_wrap[8]) |
-                       (op_addai & acc_add_wrap[8]) |                      
+                       ((op_addai | op_inca) & acc_add_wrap[8]) |                      
                        (op_rlc & acc[7]) |
                        (op_cjneri & (r_sel < h_data));
 
-   assign carry_upd  = sme & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad | op_addai); 
+   assign carry_upd  = sme & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad | op_addai | op_inca); 
 
     always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)          carry <= 1'b0;
@@ -621,7 +633,17 @@ module ice51(
       if(!i_nrst)    b <= 'd0;
       else if(sme)   b <= b_next;
    end
+    
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////
+   // F
+  
+   assign f_next = 1'b0;
    
+   always@(posedge i_clk or negedge i_nrst) begin
+      if(!i_nrst)    f <= 1'b0;
+      else if(sme)   f <= f_next;
+   end 
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DIV MUL
 
