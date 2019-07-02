@@ -153,7 +153,8 @@ module ice51(
    wire  [8:0]                   acc_subbad_wrap;
 
    // DPTR
-   wire  [15:0]                  dptr_next;
+   wire  [7:0]                   l_dptr_next;
+   wire  [7:0]                   h_dptr_next;
    reg   [15:0]                  dptr;
 
    // CARRY
@@ -549,16 +550,19 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DPTR
    
-   assign dptr_next = (op_movdp)                        ? hl_data:
-                      (op_movd  & (i_code_data == DPL)) ? {dptr[15:8], r_sel}:
-                      (op_movd  & (i_code_data == DPH)) ? {r_sel,      dptr[7:0]}:
-                      (op_movdd & (l_data == DPL))      ? {dptr[15:8], i_data_data}:
-                      (op_movdd & (l_data == DPH))      ? {i_data_data,dptr[7:0]}:                                          
-                                                                 dptr;
-
+   assign l_dptr_next = (op_movdp)                        ? l_data:
+                        (op_movd  & (i_code_data == DPL)) ? r_sel:
+                        (op_movdd & (l_data == DPL))      ? i_data_data :                                         
+                                                            dptr[7:0];
+    
+   assign h_dptr_next = (op_movdp)                        ? h_data:
+                        (op_movd  & (i_code_data == DPH)) ? r_sel:
+                        (op_movdd & (l_data == DPH))      ? i_data_data :                                         
+                                                            dptr[15:8];
+                              
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    dptr <= 'd0;
-      else if(sme)   dptr <= dptr_next;
+      else if(sme)   dptr <= {h_dptr_next,l_dptr_next};
    end
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -594,6 +598,6 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // MUL
 
-   assign mul_ab = 'd0;//acc * b;
+   assign mul_ab = acc * b;
    
 endmodule
