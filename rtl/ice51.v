@@ -148,9 +148,10 @@ module ice51(
    // ACCUMULATOR
    wire  [7:0]                   acc_next;
    reg   [7:0]                   acc; 
-   wire  [8:0]                   acc_sub_wrap;
-   wire  [8:0]                   acc_subbar_wrap;
-   wire  [8:0]                   acc_subbad_wrap;
+   wire  [8:0]                   acc_sub_wrap; 
+   wire  [7:0]                   acc_add;
+   wire  [7:0]                   acc_sub;
+   wire  [8:0]                   acc_carry;
 
    // DPTR
    wire  [7:0]                   l_dptr_next;
@@ -430,19 +431,24 @@ module ice51(
    assign pc_fwd           = sme & op_sjmp & ~i_code_data[7];
    
    assign pc_replace       = sme & op_ljmp;
-   
-   assign pc_jb_bck        = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & l_data[7]; 
-   assign pc_jb_fwd        = sme & op_jb & (acc[h_data[3:0]] == 1'b1) & ~l_data[7];
+  
+   assign pc_jb            = sme & op_jb & (acc[h_data[3:0]] == 1'b1); 
+   assign pc_jb_bck        = pc_jb & l_data[7]; 
+   assign pc_jb_fwd        = pc_jb & ~l_data[7];
   
    assign pc_jnb           = sme & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
+  
+   assign pc_jc            = sme & op_jc & carry;
+   assign pc_jc_bck        = pc_jc & h_data[7];
+   assign pc_jc_fwd        = pc_jc & ~h_data[7];
    
-   assign pc_jc_bck        = sme & op_jc & carry & h_data[7];
-   assign pc_jc_fwd        = sme & op_jc & carry & ~h_data[7];
-   assign pc_jnc_bck       = sme & op_jnc & ~carry & h_data[7];
-   assign pc_jnc_fwd       = sme & op_jnc & ~carry & ~h_data[7];  
-   
-   assign pc_cjne_bck      = sme & op_cjneri & l_data[7]  & (r_sel != h_data);
-   assign pc_cjne_fwd      = sme & op_cjneri & ~l_data[7] & (r_sel != h_data); 
+   assign pc_jnc           = sme & op_jnc & ~carry;
+   assign pc_jnc_bck       = pc_jnc & h_data[7];
+   assign pc_jnc_fwd       = pc_jnc & ~h_data[7];  
+  
+   assign pc_cjne          = sme & op_cjneri & (r_sel != h_data);
+   assign pc_cjne_bck      = pc_cjne & l_data[7];
+   assign pc_cjne_fwd      = pc_cjne & ~l_data[7]; 
 
    assign pc_jz_fwd        = sme & op_jz & ~i_code_data[7] & (acc == 'd0);
 
@@ -524,29 +530,33 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // ACCUMULATOR 
 
-   assign acc_sub_wrap = (acc - h_data - carry);
-
-   assign acc_subbar_wrap = (acc - r_sel - carry);
-
-   assign acc_subbad_wrap = (acc - b - carry);
    
+   assign acc_sub = (op_subbai) ? h_data:
+                    (op_subbar) ? r_sel:
+                                  b;
+   
+   assign acc_carry        = acc - carry;
+   assign acc_sub_wrap     = acc_carry - acc_sub; 
+  
+   assign acc_add = (op_addai) ? i_code_data : 
+                    (op_addad) ? i_data_data :
+                    (op_addar) ? r_sel:
+                                 8'h00;
+
    assign acc_next = (op_mul                            ) ? mul_ab[7:0]:
-                     (op_subbad & d_bb                  ) ? acc_subbad_wrap[7:0]:
-                     (op_rlc                            ) ? {acc[6:0], carry}:
-                     (op_addai                          ) ? (acc + i_code_data):
-                     (op_addad                          ) ? (acc + i_data_data):
+                     ((op_subbad & d_bb) |
+                      op_subbai |
+                      op_subbar                         ) ? acc_subbad_wrap[7:0]:
+                     (op_rlc                            ) ? {acc[6:0], carry}: 
                      (op_movad                          ) ? i_data_data:
-                     (op_xrla                           ) ? (acc ^ h_data):
-                     (op_subbai                         ) ? acc_sub_wrap[7:0]:
-                     (op_subbar                         ) ? acc_subbar_wrap[7:0]:
+                     (op_xrla                           ) ? (acc ^ h_data): 
                      (op_subbad & d_acc                 ) ? (8'h00 - carry):
-                     (op_movar                          ) ? r_sel:
-                     (op_addar                          ) ? acc + r_sel:
+                     (op_movar                          ) ? r_sel: 
                      (op_deca                           ) ? acc - 'd1:
                      (op_clra                           ) ? 'd0:                                 
                      ((op_movc | op_movai)              ) ? i_code_data:
                      (op_movxad & (dptr == 16'h200)     ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
-                                                                   acc;
+                                                            (acc + acc_add);
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    acc <= 'd0;
@@ -575,11 +585,9 @@ module ice51(
    // CARRY
   
    assign carry_next = (op_subbad & carry & d_acc) |
-                       (op_subbad & acc_subbad_wrap[8] & d_bb) |
+                       (((op_subbad & d_bb) | op_subbar | op_subbai) & acc_sub_wrap[8]) |
                        (op_rlc & acc[7]) |
-                       (op_cjneri & (r_sel < h_data)) |
-                       (op_subbar & acc_subbar_wrap[8]) |
-                       (op_subbai & acc_sub_wrap[8]);
+                       (op_cjneri & (r_sel < h_data));
 
    assign carry_upd  = sme & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad); 
 
@@ -591,10 +599,10 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // B
  
-   assign b_next = (op_mul                        ) ? mul_ab[15:8]:
-                   (op_movd & (i_code_data == BB) ) ? r_sel:
-                   (op_xrldi & (h_data == BB)     ) ? b ^ l_data:
-                                                             b;
+   assign b_next = (op_mul                     ) ? mul_ab[15:8]:
+                   (op_movd & d_bb             ) ? r_sel:
+                   (op_xrldi & (h_data == BB)  ) ? b ^ l_data:
+                                                   b;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    b <= 'd0;
