@@ -384,7 +384,8 @@ module ice51(
                op_movdi  | 
                op_movdt0 | 
                op_movdt1 | 
-               op_movrd;
+               op_movrd  |
+               op_xrlda;
    
    assign d3 = op_jnb    | 
                op_ljmp   | 
@@ -463,7 +464,8 @@ module ice51(
                                     op_xrla     |
                                     op_subbai   |
                                     op_subbar   |
-                                    op_addar   ));
+                                    op_addar    |
+                                    op_xrlda));
                        
    assign pc_next    = (pc_jnb | pc_jb_fwd | pc_cjne_fwd ) ? pc + l_data[6:0]:
                        (pc_bck                           ) ? pc - pc_twos - 'd1:
@@ -494,9 +496,7 @@ module ice51(
    assign r_upd  = sme & (op_movra | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1 | op_movrd | 
                           (op_movd & (i_code_data < 8'h08)));
      
-   assign r_index =  (op_movdt0 | op_movdt1) ? h_data[2:0]:
-                     (op_xrlda)              ? i_code_data[2:0] : 
-                                               op[2:0];
+   assign r_index =  (op_movdt0 | op_movdt1 | op_xrlda) ? h_data[2:0] : op[2:0];
 
    assign r_sel  = r[r_index];
 
