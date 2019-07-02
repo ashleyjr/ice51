@@ -55,6 +55,7 @@ module ice51(
                MOVDI = 8'h75, // mov direct, #imm
                MOVRI = 8'h78, // mov r?, #imm
                SJMP  = 8'h80,
+               DIV   = 8'h84, // div
                MOVDD = 8'h85, // mov (direct), (direct)
                MOVDT0= 8'h86, // mpv (direct), @r0
                MOVDT1= 8'h87, // mpv (direct), @r1
@@ -84,7 +85,7 @@ module ice51(
                BB    = 8'hF0;
   
    // BIT
-   parameter   BIT0_ACC = 8'hE0;
+   parameter   BIT_ACC = 8'hE0;
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // SIGNALS
@@ -167,7 +168,8 @@ module ice51(
    reg   [7:0]                   b;
    wire  [7:0]                   b_next;
 
-   // Mul
+   // DIV MUL
+   wire  [7:0]                   quo_ab;
    wire  [15:0]                  mul_ab;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -311,7 +313,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
-   assign o_data_wr   = sme & (op_movda | op_movdi | op_movt1a | (op_movd & (i_code_data > 8'h07)));
+   assign o_data_wr   = sme & ((op_movda & ~d_bb) | op_movdi | op_movt1a | (op_movd & (i_code_data > 8'h07)));
    assign o_data_addr = (op_movdt0)             ? r[0]:
                         (op_movdt1 | op_movt1a) ? r[1]:
                         (op_movdi  | op_movdd ) ? h_data:
@@ -364,6 +366,8 @@ module ice51(
    assign op_xrldi   = (op == XRLDI); 
    assign op_jz      = (op == JZ); 
    assign op_mul     = (op == MUL);
+   assign op_div     = (op == DIV);
+
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DIRECTS
@@ -434,7 +438,7 @@ module ice51(
    assign pc_jb_bck        = pc_jb & l_data[7]; 
    assign pc_jb_fwd        = pc_jb & ~l_data[7];
   
-   assign pc_jnb           = sme & op_jnb & (~acc[0] & (h_data == BIT0_ACC));
+   assign pc_jnb           = sme & op_jnb & (~acc[h_data[2:0]] & (h_data[7:3] == (BIT_ACC >> 3)));
   
    assign pc_jc            = sme & op_jc & carry;
    assign pc_jc_bck        = pc_jc & h_data[7];
@@ -452,7 +456,8 @@ module ice51(
 
    assign pc_inc     = (smd1 & ~op_movrd)       | 
                        (smf & uart_load_done)   |
-                       (smd0  & ~(  op_mul      | 
+                       (smd0  & ~(  op_div      |
+                                    op_mul      | 
                                     op_rlc      |
                                     op_clrc     |
                                     op_jc       |
@@ -541,6 +546,7 @@ module ice51(
                                  8'h00;
 
    assign acc_next = (op_mul                                   ) ? mul_ab[7:0]:
+                     (op_div                                   ) ? quo_ab:
                      ((op_subbad & d_bb) |op_subbai | op_subbar) ? acc_subbad_wrap[7:0]:
                      (op_rlc                                   ) ? {acc[6:0], carry}: 
                      (op_movad                                 ) ? i_data_data:
@@ -595,6 +601,7 @@ module ice51(
    // B
  
    assign b_next = (op_mul                     ) ? mul_ab[15:8]:
+                   (op_movda & d_bb            ) ? acc:
                    (op_movd & d_bb             ) ? r_sel:
                    (op_xrldi & (h_data == BB)  ) ? b ^ l_data:
                                                    b;
@@ -605,8 +612,9 @@ module ice51(
    end
    
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
-   // MUL
+   // DIV MUL
 
+   assign quo_ab = (b == 'd0) ? 'd0 : (acc / b); 
    assign mul_ab = acc * b;
    
 endmodule
