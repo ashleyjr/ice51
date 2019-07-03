@@ -71,6 +71,7 @@ module ice51(
                MOVRD = 8'hA8, // mov r, (direct)
                CJNERI= 8'hB8, // cjne r?, #imm, offset
                CLRC  = 8'hC3, // clr c
+               SETBC = 8'hD3, // setb c
                MOVXAD= 8'hE0, // movx a, @dptr
                CLRA  = 8'hE4, // clr a
                MOVAD = 8'hE5, // mov a, direct
@@ -322,7 +323,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DATA
 
-   assign o_data_wr   = sme & ((op_movda & ~d_bb) | op_movdi | op_movt1a | (op_movd & (i_code_data > 8'h07)));
+   assign o_data_wr   = sme & ((op_movda & ~d_bb) | (op_movdi & ~d_bb) | op_movt1a | (op_movd & (i_code_data > 8'h07)));
    assign o_data_addr = (op_movdt0)             ? r[0]:
                         (op_movdt1 | op_movt1a) ? r[1]:
                         (op_movdi  | op_movdd ) ? h_data:
@@ -379,6 +380,8 @@ module ice51(
    assign op_cpla    = (op == CPLA);
    assign op_decr    = (op5 == (DECR >> 3));
    assign op_inca    = (op == INCA);
+   assign op_setbc   = (op == SETBC);
+
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DIRECTS
@@ -497,7 +500,8 @@ module ice51(
                                     op_subbai   |
                                     op_subbar   |
                                     op_addar    |
-                                    op_xrlda));
+                                    op_xrlda    |
+                                    op_setbc ));
                        
    assign pc_next    = (pc_jnb | pc_jb_fwd | pc_cjne_fwd ) ? pc + l_data[6:0]:
                        (pc_bck                           ) ? pc - pc_twos - 'd1:
@@ -569,7 +573,7 @@ module ice51(
    assign acc_next = (op_cpla                                  ) ? ~acc:
                      (op_mul                                   ) ? mul_ab[7:0]:
                      (op_div                                   ) ? quo_ab:
-                     ((op_subbad & d_bb) |op_subbai | op_subbar) ? acc_subbad_wrap[7:0]:
+                     ((op_subbad & d_bb) |op_subbai | op_subbar) ? acc_sub_wrap[7:0]:
                      (op_rlc                                   ) ? {acc[6:0], carry}: 
                      (op_movad                                 ) ? i_data_data:
                      (op_xrla                                  ) ? (acc ^ h_data): 
@@ -611,9 +615,10 @@ module ice51(
                        (((op_subbad & d_bb) | op_subbar | op_subbai) & acc_sub_wrap[8]) |
                        ((op_addai | op_inca) & acc_add_wrap[8]) |                      
                        (op_rlc & acc[7]) |
-                       (op_cjneri & (r_sel < h_data));
+                       (op_cjneri & (r_sel < h_data)) |
+                       op_setbc;
 
-   assign carry_upd  = sme & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad | op_addai | op_inca); 
+   assign carry_upd  = sme & (op_clrc | op_cjneri | op_subbai | op_subbar | op_rlc | op_subbad | op_addai | op_inca | op_setbc); 
 
     always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)          carry <= 1'b0;
@@ -625,6 +630,7 @@ module ice51(
  
    assign b_next = (op_mul                     ) ? mul_ab[15:8]:
                    (op_movda & d_bb            ) ? acc:
+                   (op_movdi & (h_data == BB)  ) ? i_code_data:
                    (op_movd & d_bb             ) ? r_sel:
                    (op_xrldi & (h_data == BB)  ) ? b ^ l_data:
                                                    b;
