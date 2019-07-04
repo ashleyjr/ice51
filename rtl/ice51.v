@@ -179,8 +179,12 @@ module ice51(
    wire                          f_next;
 
    // DIV MUL
-   wire  [7:0]                   quo_ab;
-   
+   wire  [8:0]                   div_shift;
+   reg   [2:0]                   div_i;
+   reg   [8:0]                   div_r;
+   reg   [7:0]                   div_q; 
+   reg                           div_done;
+
    // MUL
    reg                           n_mul_idle;
    wire                          mul_idle;
@@ -435,7 +439,10 @@ module ice51(
                        (smd1 & d3                     ) ? SM_DECODE2:  
                        (smd1                          ) ? SM_EXECUTE:  
                        (smd2                          ) ? SM_EXECUTE: 
-                       (sme & mul_done & ~mul_start   ) ? SM_FETCH: 
+                       (sme & (
+                        (~op_mul & ~op_div) |
+                        (op_mul & mul_done & ~mul_start) |
+                        (op_div & div_done)       )) ? SM_FETCH: 
                                                           state;
 
    always@(posedge i_clk or negedge i_nrst) begin
@@ -582,7 +589,7 @@ module ice51(
 
    assign acc_next = (op_cpla                                  ) ? ~acc:
                      (op_mul                                   ) ? mul_ab[7:0]:
-                     (op_div                                   ) ? quo_ab:
+                     (op_div & div_done                        ) ? div_q:
                      ((op_subbad & d_bb) |op_subbai | op_subbar) ? acc_sub_wrap[7:0]:
                      (op_rlc                                   ) ? {acc[6:0], carry}: 
                      (op_movad                                 ) ? i_data_data:
@@ -663,8 +670,40 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DIV MUL
 
-   assign quo_ab = (b == 'd0) ? 'd0 : (acc / b);  
-   
+   //assign quo_ab = (b == 'd0) ? 'd0 : (acc / b);  
+      
+   assign div_go = op_div & sme & ~div_done;
+
+   assign div_shift = {div_r[7:0],acc[div_i]}; 
+
+   assign div_comp = (div_shift >= b);
+
+   assign div_stop = (div_i == 'd0);
+
+	always@(posedge i_clk or negedge i_nrst) begin
+		if(!i_nrst) begin
+         div_i    <= 'd0;
+         div_r    <= 'd0;
+         div_q    <= 'd0;
+		   div_done <= 'd0;
+      end else begin  
+         div_done <= div_stop;
+         if(div_go) begin 
+            div_i <= div_i - 'd1; 
+            if (div_comp) begin
+               div_r          <= div_shift - b;
+               div_q[div_i]   <= 1'b1;
+            end else begin
+               div_r          <= div_shift; 
+            end 
+		   end
+         if(div_done) begin
+            div_q    <= 'd0;
+            div_r    <= 'd0;
+            div_i    <= 7;  
+         end
+      end
+	end
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // MUL
   
