@@ -161,9 +161,11 @@ module ice51(
    wire  [8:0]                   acc_carry;
 
    // DPTR
+   reg   [7:0]                   l_dptr; 
    wire  [7:0]                   l_dptr_next;
+   reg   [7:0]                   h_dptr;
    wire  [7:0]                   h_dptr_next;
-   reg   [15:0]                  dptr;
+   wire  [15:0]                  dptr;
 
    // CARRY
    reg                           carry;
@@ -178,16 +180,23 @@ module ice51(
    reg                           f;
    wire                          f_next;
 
-   // DIV MUL
+   // DIV
    wire  [8:0]                   div_shift;
    reg   [2:0]                   div_i;
+   wire  [2:0]                   div_i_next;
    reg   [8:0]                   div_r;
+   wire  [8:0]                   div_r_next;
    reg   [7:0]                   div_q; 
+   wire  [7:0]                   div_q_next; 
+   reg   [7:0]                   div_n; 
+   wire  [7:0]                   div_n_next;
+   reg   [7:0]                   div_d; 
+   wire  [7:0]                   div_d_next;
+   wire  [7:0]                   div_sub;
    reg                           div_done;
 
    // MUL
-   reg                           n_mul_idle;
-   wire                          mul_idle;
+   reg                           n_mul_idle; 
    wire                          mul_start;
    wire  [7:0]                   mul_a_next;
    reg   [7:0]                   mul_a;   
@@ -582,8 +591,7 @@ module ice51(
    assign acc_add = (op_addai) ? i_code_data : 
                     (op_addad) ? i_data_data :
                     (op_addar) ? r_sel:
-                    (op_inca ) ? 'd1:
-                                 8'h00;
+                                 {7'h00, op_inca}; 
 
    assign acc_add_wrap = acc + acc_add;
 
@@ -609,22 +617,41 @@ module ice51(
     
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DPTR
+ 
+   assign l_dptr_code =  (i_code_data == DPL);
+   assign l_dptr_data =  (l_data== DPL);
+
+   assign l_dptr_next = l_dptr_code ? r_sel:
+                        l_dptr_data ? i_data_data:
+                                      l_data; 
+   assign l_dptr_upd  = sme & (
+                        (op_movdp) |                       
+                        (op_movd  & l_dptr_code) |
+                        (op_movdd & l_dptr_data));
+
+   assign h_dptr_code =  (i_code_data == DPH);
+   assign h_dptr_data =  (l_data== DPH);
    
-   assign l_dptr_next = (op_movdp)                        ? l_data:
-                        (op_movd  & (i_code_data == DPL)) ? r_sel:
-                        (op_movdd & (l_data == DPL))      ? i_data_data :                                         
-                                                            dptr[7:0];
-    
-   assign h_dptr_next = (op_movdp)                        ? h_data:
-                        (op_movd  & (i_code_data == DPH)) ? r_sel:
-                        (op_movdd & (l_data == DPH))      ? i_data_data :                                         
-                                                            dptr[15:8];
-                              
+   assign h_dptr_next = h_dptr_code ? r_sel:
+                        h_dptr_data ? i_data_data:
+                                      h_data;
+   assign h_dptr_upd  = sme & (
+                        (op_movdp) |
+                        (op_movd  & h_dptr_code) |
+                        (op_movdd & h_dptr_data));
+                         
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)    dptr <= 'd0;
-      else if(sme)   dptr <= {h_dptr_next,l_dptr_next};
+      if(!i_nrst)          l_dptr <= 'd0;
+      else if(l_dptr_upd)  l_dptr <= l_dptr_next;
    end
    
+   always@(posedge i_clk or negedge i_nrst) begin
+      if(!i_nrst)          h_dptr <= 'd0;
+      else if(h_dptr_upd)  h_dptr <= h_dptr_next;
+   end
+   
+   assign dptr = {h_dptr,l_dptr};
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // CARRY
   
@@ -668,83 +695,96 @@ module ice51(
    end 
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
-   // DIV MUL
+   // DIV
 
-   //assign quo_ab = (b == 'd0) ? 'd0 : (acc / b);  
-      
-   assign div_go = op_div & sme & ~div_done;
+   assign div_start  = op_div & smd0;
+   assign div_go     = op_div & sme & ~div_done;
+   assign div_shift  = {div_r[7:0],div_n[7]}; 
+   assign div_comp   = (div_shift >= div_d);
+   assign div_stop   = (div_i == 'd0);
 
-   assign div_shift = {div_r[7:0],acc[div_i]}; 
+   assign div_sub    = (div_comp ) ? div_d : 'd0;
 
-   assign div_comp = (div_shift >= b);
+   assign div_n_next = (div_start) ? acc : (div_n << 1);
 
-   assign div_stop = (div_i == 'd0);
+   assign div_i_next = (div_go  & ~div_stop ) ? div_i - 'd1:
+                       (div_done            ) ? 3'h7:
+                                                div_i;
+ 
+   assign div_r_next = (div_go  ) ? div_shift - div_sub:
+                       (div_stop) ? 8'h00:
+                                    div_r;  
+
+   assign div_q_next = (div_go) ? {div_q[6:0], div_comp}:
+                                  8'h00;  
+
+   assign div_d_next = (div_start) ? b:
+                                     div_d;
+
+   always@(posedge i_clk or negedge i_nrst) begin
+		if(!i_nrst)    div_n <= 'd0;
+      else           div_n <= div_n_next;
+   end
+
+   always@(posedge i_clk or negedge i_nrst) begin
+		if(!i_nrst)    div_d <= 'd0;
+      else           div_d <= div_d_next;
+   end
+
+   always@(posedge i_clk or negedge i_nrst) begin
+		if(!i_nrst)    div_q <= 'd0;
+      else           div_q <= div_q_next;
+   end
+
+   always@(posedge i_clk or negedge i_nrst) begin
+		if(!i_nrst)    div_r <= 'd0;
+      else           div_r <= div_r_next;
+   end
 
 	always@(posedge i_clk or negedge i_nrst) begin
-		if(!i_nrst) begin
-         div_i    <= 'd0;
-         div_r    <= 'd0;
-         div_q    <= 'd0;
-		   div_done <= 'd0;
-      end else begin  
-         div_done <= div_stop;
-         if(div_go) begin 
-            div_i <= div_i - 'd1; 
-            if (div_comp) begin
-               div_r          <= div_shift - b;
-               div_q[div_i]   <= 1'b1;
-            end else begin
-               div_r          <= div_shift; 
-            end 
-		   end
-         if(div_done) begin
-            div_q    <= 'd0;
-            div_r    <= 'd0;
-            div_i    <= 7;  
-         end
-      end
+		if(!i_nrst)    div_i <= 'd0; 
+	   else           div_i <= div_i_next;
+   end
+
+	always@(posedge i_clk or negedge i_nrst) begin
+		if(!i_nrst)    div_done <= 'd0;
+      else           div_done <= div_stop; 
 	end
+   
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // MUL
   
-   assign mul_start = mul_idle & op_mul & sme;
-  
-   assign mul_done = (mul_a == 8'h00);
+   assign mul_start        = ~n_mul_idle & op_mul & sme;
+   assign mul_done         = (mul_a == 8'h00);
+   assign n_mul_idle_next  = mul_start | (n_mul_idle & ~mul_done);  
+   
+   assign mul_upd          = mul_start | n_mul_idle; 
+   assign mul_ab_upd       = mul_start | (n_mul_idle & mul_a[0]);
+   
+   assign mul_a_next       = (mul_start) ? acc : (mul_a >> 1); 
 
-   assign n_mul_idle_next = mul_start | (n_mul_idle & ~mul_done);  
+   assign mul_b_next       = (mul_start) ? {8'h00, b} : (mul_b << 1);
 
-   assign mul_idle = ~n_mul_idle;
+   assign mul_ab_next      = (mul_start) ? 16'h0000 : (mul_ab + mul_b);
 
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)    n_mul_idle <= 'd0;
-      else           n_mul_idle <= n_mul_idle_next;
+      if(!i_nrst)          n_mul_idle <= 'd0;
+      else                 n_mul_idle <= n_mul_idle_next;
    end 
    
-   assign mul_a_next = (mul_start ) ? acc:
-                       (n_mul_idle) ? (mul_a >> 1):
-                                      mul_a; 
-
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)    mul_a <= 'd0;
-      else           mul_a <= mul_a_next;
+      if(!i_nrst)          mul_a <= 'd0;
+      else if(mul_upd)     mul_a <= mul_a_next;
    end 
 
-   assign mul_b_next = (mul_start ) ? {8'h00, b}:
-                       (n_mul_idle) ? (mul_b << 1):
-                                      mul_b;
-
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)    mul_b <= 'd0;
-      else           mul_b <= mul_b_next;
+      if(!i_nrst)          mul_b <= 'd0;
+      else if(mul_upd)     mul_b <= mul_b_next;
    end 
 
-   assign mul_ab_next = (mul_start            ) ? 'd0:
-                        (n_mul_idle & mul_a[0]) ? (mul_ab + mul_b):
-                                                   mul_ab;
-
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)    mul_ab <= 'd0;
-      else           mul_ab <= mul_ab_next;
+      if(!i_nrst)          mul_ab <= 'd0;
+      else if(mul_ab_upd)  mul_ab <= mul_ab_next;
    end 
 
 endmodule
