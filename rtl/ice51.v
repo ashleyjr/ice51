@@ -159,6 +159,7 @@ module ice51(
    wire  [7:0]                   acc_add;
    wire  [7:0]                   acc_sub;
    wire  [8:0]                   acc_carry;
+   wire                          acc_zero;
 
    // DPTR
    reg   [7:0]                   l_dptr; 
@@ -197,13 +198,14 @@ module ice51(
 
    // MUL
    reg                           n_mul_idle; 
+   wire                          n_mul_idle_next;
    wire                          mul_start;
-   wire  [7:0]                   mul_a_next;
-   reg   [7:0]                   mul_a;   
-   wire  [15:0]                  mul_b_next;
-   reg   [15:0]                  mul_b;
-   wire  [15:0]                  mul_ab_next;
+   wire                          mul_done;
+   reg   [7:0]                   mul_count;
+   wire  [7:0]                   mul_count_next;
+   reg   [7:0]                   mul_a;
    reg   [15:0]                  mul_ab;
+   wire  [15:0]                  mul_ab_next;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // UART RX
@@ -495,7 +497,7 @@ module ice51(
    assign pc_cjne_bck      = pc_cjne & l_data[7];
    assign pc_cjne_fwd      = pc_cjne & ~l_data[7]; 
 
-   assign pc_jz_fwd        = sme & op_jz & ~i_code_data[7] & (acc == 'd0);
+   assign pc_jz_fwd        = sme & op_jz & ~i_code_data[7] & acc_zero;
 
    assign pc_inc     = (smd1 & ~op_movrd)       | 
                        (smf & uart_load_done)   |
@@ -595,8 +597,10 @@ module ice51(
 
    assign acc_add_wrap = acc + acc_add;
 
+   assign acc_zero = (acc == 'd0);
+
    assign acc_next = (op_cpla                                  ) ? ~acc:
-                     (op_mul                                   ) ? mul_ab[7:0]:
+                     (op_mul & mul_done                        ) ? mul_ab[7:0]:
                      (op_div & div_done                        ) ? div_q:
                      ((op_subbad & d_bb) |op_subbai | op_subbar) ? acc_sub_wrap[7:0]:
                      (op_rlc                                   ) ? {acc[6:0], carry}: 
@@ -604,7 +608,7 @@ module ice51(
                      (op_xrla                                  ) ? (acc ^ h_data): 
                      (op_subbad & d_acc                        ) ? (8'h00 - carry):
                      (op_movar                                 ) ? r_sel: 
-                     (op_deca                                  ) ? acc - 'd1:
+                     (op_deca | op_mul                         ) ? acc - 'd1:
                      (op_clra                                  ) ? 'd0:                                 
                      ((op_movc | op_movai)                     ) ? i_code_data:
                      (op_movxad & (dptr == 16'h200)            ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
@@ -672,7 +676,7 @@ module ice51(
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // B
  
-   assign b_next = (op_mul                     ) ? mul_ab[15:8]:
+   assign b_next = (op_mul & mul_done          ) ? mul_ab[15:8]:
                    (op_movda & d_bb            ) ? acc:
                    (op_movdi & (h_data == BB)  ) ? i_code_data:
                    (op_movd & d_bb             ) ? r_sel:
@@ -755,36 +759,18 @@ module ice51(
    // MUL
   
    assign mul_start        = ~n_mul_idle & op_mul & sme;
-   assign mul_done         = (mul_a == 8'h00);
-   assign n_mul_idle_next  = mul_start | (n_mul_idle & ~mul_done);  
+   assign mul_done         = acc_zero;
+   assign n_mul_idle_next  = mul_start | (n_mul_idle & ~mul_done);    
+   assign mul_ab_next      = (n_mul_idle_next) ? (mul_ab + b) : 16'h0000;
    
-   assign mul_upd          = mul_start | n_mul_idle; 
-   assign mul_ab_upd       = mul_start | (n_mul_idle & mul_a[0]);
-   
-   assign mul_a_next       = (mul_start) ? acc : (mul_a >> 1); 
-
-   assign mul_b_next       = (mul_start) ? {8'h00, b} : (mul_b << 1);
-
-   assign mul_ab_next      = (mul_start) ? 16'h0000 : (mul_ab + mul_b);
-
-   always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)          n_mul_idle <= 'd0;
-      else                 n_mul_idle <= n_mul_idle_next;
-   end 
-   
-   always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)          mul_a <= 'd0;
-      else if(mul_upd)     mul_a <= mul_a_next;
-   end 
-
-   always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)          mul_b <= 'd0;
-      else if(mul_upd)     mul_b <= mul_b_next;
-   end 
-
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)          mul_ab <= 'd0;
-      else if(mul_ab_upd)  mul_ab <= mul_ab_next;
+      else if(~acc_zero)   mul_ab <= mul_ab_next;
+   end 
+
+   always@(posedge i_clk or negedge i_nrst) begin
+      if(!i_nrst)    n_mul_idle <= 'd0;
+      else           n_mul_idle <= n_mul_idle_next;
    end 
 
 endmodule
