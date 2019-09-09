@@ -142,7 +142,8 @@ module ice51(
    wire  [6:0]                   pc_n_h_data7;
    wire  [8:0]                   pc_bck_l_data;
    wire  [8:0]                   pc_bck_h_data;
-   
+   wire  [6:0]                   pc_add;
+
    // REGS
    wire                          r_upd;
    reg   [7:0]                   r[7:0];
@@ -530,16 +531,18 @@ module ice51(
                                     op_addar    |
                                     op_xrlda    |
                                     op_setbc ));
-                       
-   assign pc_next    = (pc_jnb | pc_jb_fwd | pc_cjne_fwd ) ? pc + l_data[6:0]:
-                       (pc_bck                           ) ? pc - pc_twos - 'd1:
-                       (pc_replace                       ) ? hl_data:
-                       (pc_jb_bck | pc_cjne_bck          ) ? pc_bck_l_data:
-                       (pc_jc_bck | pc_jnc_bck           ) ? pc_bck_h_data: 
-                       (pc_jc_fwd | pc_jnc_fwd           ) ? pc + h_data[6:0] - 'd2:  
-                       (pc_jz_fwd                        ) ? pc + i_code_data[6:0]:
-                       (pc_inc                           ) ? pc + 'd1 :
-                                                             pc;
+   
+   assign pc_add     = (pc_jc_fwd | pc_jnc_fwd           ) ? h_data[6:0] - 'd2:  
+                       (pc_jz_fwd                        ) ? i_code_data[6:0]:
+                                                             'd1;
+
+   assign pc_next    = (pc_jnb | pc_jb_fwd | pc_cjne_fwd             ) ? pc + l_data[6:0]:
+                       (pc_bck                                       ) ? pc - pc_twos - 'd1:
+                       (pc_replace                                   ) ? hl_data:
+                       (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
+                       (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
+                       (pc_jc_fwd | pc_jnc_fwd | pc_jz_fwd | pc_inc  ) ? pc + pc_add:
+                                                                         pc;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    pc  <= 'd3;
