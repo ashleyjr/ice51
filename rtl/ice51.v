@@ -73,6 +73,7 @@ parameter   LJMP  = 8'h02, // ljmp addr16
             CJNERI= 8'hB8, // cjne r?, #imm, offset
             PUSH  = 8'hC0, // push r?
             CLRC  = 8'hC3, // clr c
+            XCHDI = 8'hC5, // xch a, (direct)
             POP   = 8'hD0, // pop
             SETBC = 8'hD3, // setb c
             MOVXAD= 8'hE0, // movx a, @dptr
@@ -434,6 +435,7 @@ assign op_setbc   = (op == SETBC);
 assign op_push    = (op == PUSH);
 assign op_pop     = (op == POP);
 assign op_ret     = (op == RET);
+assign op_xchdi   = (op == XCHDI);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // DIRECTS
@@ -592,7 +594,8 @@ end
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // REGS
 
-assign r_next = (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
+assign r_next = (op_movrd & (h_data == BB)                ) ? b:
+                (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
                 op_xrlda                                    ? (acc ^ r_sel):      
                 op_movri                                    ? h_data:
                 op_incr                                     ? (r_sel + 'd1):

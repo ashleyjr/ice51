@@ -1,24 +1,24 @@
 #include "ice51.h"
 
 void main (void){       
-   char a,b,c;
-   for(a=10;a<13;a++){
-      for(b=10;b<13;b++){
-         c = a * b;
-         *data = c;
-         while(0x01 & *cont);
-      }
+   char a,b;
+   short c;
+   for(a=100;a<103;a++){
+      c = a * 100;
+      
+      *data = c >> 8;
+      while(0x01 & *cont);
+      
+      *data = c;
+      while(0x01 & *cont);
    }
    while(1); 
 }
 
 // Check Uart:
-// 100
-// 110
-// 120
-// 110
-// 121 
-// 132
-// 120
-// 132
-// 144
+// 0x27
+// 0x10
+// 0x27 
+// 0x74
+// 0x27 
+// 0xD8
