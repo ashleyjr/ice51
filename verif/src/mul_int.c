@@ -1,40 +1,49 @@
 #include "ice51.h"
 
-void main (void){       
-   unsigned int a,b,i,j,k,l; 
+unsigned long mul(unsigned int a, unsigned int b){
+   unsigned int i,j,k,l; 
    unsigned char au, al, bu, bl; 
    unsigned long temp, acc;
 
+   
+   au = a >> 8;
+   al = a;
+   bu = b >> 8;
+   bl = b;
+
+   i  = al * bl;
+   j  = au * bl;
+   k  = al * bu;
+   l  = au * bu;
+    
+   acc   = i; 
+   
+   temp  = j; 
+   temp  = temp << 8;
+   temp += acc;
+   acc   = temp;
+    
+   temp  = k;
+   temp  = temp << 8;
+   temp += acc;
+   acc   = temp;
+
+   temp  = l;
+   temp  = temp << 16;
+   temp += acc;
+   acc   = temp; 
+   
+   return acc;
+}
+
+void main (void){       
+   unsigned int a,b; 
+   unsigned long acc;
 
    for(a=1000;a<1003;a++){
       for(b=1000;b<1003;b++){
-       
-         au = a >> 8;
-         al = a;
-         bu = b >> 8;
-         bl = b;
-
-         i  = al * bl;
-         j  = au * bl;
-         k  = al * bu;
-         l  = au * bu;
-          
-         acc   = i; 
-         
-         temp  = j; 
-         temp  = temp << 8;
-         temp += acc;
-         acc   = temp;
-          
-         temp  = k;
-         temp  = temp << 8;
-         temp += acc;
-         acc   = temp;
-
-         temp  = l;
-         temp  = temp << 16;
-         temp += acc;
-         acc   = temp; 
+      
+         acc = mul(a,b); 
                   
          *data = acc >> 24;
          while(0x01 & *cont);
