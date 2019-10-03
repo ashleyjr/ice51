@@ -108,7 +108,7 @@ module ice51_tb;
       end
 
       // Check no unwanted rxs
-      repeat(1000) begin
+      repeat(10000) begin
          @(posedge i_clk);
          if(!o_uart_tx) begin
             repeat(1000)
@@ -134,7 +134,7 @@ module ice51_tb;
             #(SAMPLE_TB) uart_send(load_mem[i]);
       `endif
 
-      #3000000
+      #5000000
       $display("ERROR: Timeout");
       $finish;
 	end
