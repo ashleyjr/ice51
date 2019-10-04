@@ -645,10 +645,10 @@ assign r_next = (op_movrd & (h_data == DPH)               ) ? h_dptr:
                                                               r_sel;
 
 assign r_upd  = sme & (op_movra | op_decr | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1 | op_movrd | 
-                        (op_pop & (i_code_data < 8'h08)) | 
+                        (op_pop & (h_data < 8'h08)) | 
                        (op_movd & (i_code_data < 8'h08)));
   
-assign r_index =  (op_movdt0 | op_movdt1 | op_xrlda | op_push | op_pop) ? h_data[2:0] : op[2:0];
+assign r_index =  (op_movdt0 | op_movdt1 | op_xrlda | op_push | op_pop | op_pop) ? h_data[2:0] : op[2:0];
 
 assign r_sel  = r[r_index];
 
@@ -678,7 +678,8 @@ assign acc_sub = (op_subbai) ? h_data:
 assign acc_carry        = acc - carry;
 assign acc_sub_wrap     = acc_carry - acc_sub; 
 
-assign acc_add = (op_addcd) ? b: 
+assign acc_add = (op_addci) ? h_data:
+                 (op_addcd) ? b: 
                  (op_addai) ? i_code_data: 
                  (op_addad & (h_data == DPH)) ? h_dptr:
                  (op_addad & (h_data == BB)) ? b:
@@ -887,11 +888,11 @@ assign l_dptr_upd  = sme & (
    assign mul_start        = ~n_mul_idle & op_mul & sme;
    assign mul_done         = acc_zero;
    assign n_mul_idle_next  = mul_start | (n_mul_idle & ~mul_done);    
-   assign mul_ab_next      = (n_mul_idle_next) ? (mul_ab + b) : 16'h0000;
+   assign mul_ab_next      = (n_mul_idle_next & ~acc_zero) ? (mul_ab + b) : 16'h0000;
    
    always@(posedge i_clk or negedge i_nrst) begin
-      if(!i_nrst)          mul_ab <= 'd0;
-      else if(~acc_zero)   mul_ab <= mul_ab_next;
+      if(!i_nrst)                                   mul_ab <= 'd0;
+      else if(~acc_zero | (mul_start & acc_zero))  mul_ab <= mul_ab_next;
    end 
 
    always@(posedge i_clk or negedge i_nrst) begin

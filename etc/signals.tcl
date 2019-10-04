@@ -34,6 +34,8 @@ lappend sigs "r\[7\]"
 lappend sigs "acc"
 lappend sigs "carry"
 lappend sigs "b"
+lappend sigs "sp"
+
 
 set added [ gtkwave::addSignalsFromList $sigs ]
 gtkwave::/Time/Zoom/Zoom_Full
