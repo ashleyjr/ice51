@@ -686,7 +686,7 @@ assign acc_add = (op_addcd) ? b:
                  (op_addar | op_addcr) ? r_sel:
                               {7'h00, op_inca}; 
 
-assign acc_add_wrap = acc + acc_add + (carry & (op_addci | op_addcr));
+assign acc_add_wrap = acc + acc_add + (carry & (op_addci | op_addcd | op_addcr));
 
 assign acc_zero = (acc == 'd0);
 
@@ -698,6 +698,7 @@ assign acc_next = (op_xchdi & (h_data == BB)                ) ? b:
                   (op_div & div_done                        ) ? div_q:
                   ((op_subbad & d_bb) |op_subbai | op_subbar) ? acc_sub_wrap[7:0]:
                   (op_rlc                                   ) ? {acc[6:0], carry}: 
+                  (op_movad & (h_data == BB)                ) ? b:
                   (op_movad & (h_data == DPH)               ) ? dptr[15:8]:
                   (op_movad & (h_data == DPL)               ) ? dptr[7:0]:
                   (op_movad                                 ) ? i_data_data:

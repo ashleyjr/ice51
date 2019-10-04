@@ -1,0 +1,65 @@
+#include "ice51.h"
+
+
+void main (void){       
+   long a, b, c; 
+
+   for(a=1000;a<1003;a++){
+      for(b=1000;b<1003;b++){
+      
+         c = a * b;     
+  
+         *data = c >> 24;
+         while(0x01 & *cont);
+         
+         *data = c >> 16;
+         while(0x01 & *cont);
+
+         *data = c >> 8;
+         while(0x01 & *cont);
+         
+         *data = c;
+         while(0x01 & *cont);
+      }
+   }
+   while(1); 
+}
+
+// Check Uart:
+// 0x00
+// 0x0F
+// 0x42 
+// 0x40
+// 0x00
+// 0x0F
+// 0x46
+// 0x28
+// 0x00
+// 0x0F
+// 0x4A
+// 0x10
+// 0x00
+// 0x0F
+// 0x46
+// 0x28
+// 0x00
+// 0x0F
+// 0x4A
+// 0x11
+// 0x00
+// 0x0F
+// 0x4D
+// 0xFA
+// 0x00
+// 0x0F
+// 0x4A
+// 0x10
+// 0x00
+// 0x0F
+// 0x4D
+// 0xFA
+// 0x00
+// 0x0F
+// 0x51
+// 0xE4
+
