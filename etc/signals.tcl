@@ -35,6 +35,9 @@ lappend sigs "acc"
 lappend sigs "carry"
 lappend sigs "b"
 lappend sigs "sp"
+lappend sigs "op_lcall"
+lappend sigs "op_ret"
+
 
 
 set added [ gtkwave::addSignalsFromList $sigs ]
