@@ -587,6 +587,7 @@ assign pc_cjnead        = sme & op_cjnead & (
                            ((h_data < 8'h08) & (r_sel != acc)));
 
 assign pc_jz_fwd        = sme & op_jz & ~i_code_data[7] & acc_zero;
+assign pc_jz_bck        = sme & op_jz &  i_code_data[7] & acc_zero;
 
 assign pc_jnz_bck       = sme & op_jnz & i_code_data[7] & ~acc_zero;
 
@@ -649,7 +650,7 @@ assign pc_next    = (pc_ret_top                                   ) ? {i_data_da
                     (pc_replace                                   ) ? hl_data:
                     (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
                     (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
-                    (pc_jnz_bck | pc_djnzr_bck                    ) ? pc - pc_twos - 'd1:
+                    (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck        ) ? pc - pc_twos - 'd1:
                     (pc_jc_fwd | pc_jnc_fwd | pc_jz_fwd | pc_inc  ) ? pc + pc_add:  
                                                                       pc;
 
