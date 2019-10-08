@@ -385,7 +385,7 @@ assign o_data_wr   = (op_movdd & smd2 & (l_data != DPL) & (l_data != DPH) & (l_d
                         (op_movdi & ~d_bb) | 
                         op_push |
                         op_movt1a |
-                        (op_orldi & (h_data > 8'h07)) |
+                        (op_orldi & (h_data != DPH) & (h_data != DPL) & (h_data > 8'h07)) |
                         (op_movd & (i_code_data > 8'h07))
                      );
 assign o_data_addr = (op_orldi)               ? h_data:
@@ -512,7 +512,8 @@ assign d1 = op_xrla   |
             op_cplb  |
             op_xchdi |
             op_addci |
-            op_incd ;
+            op_incd |
+            op_subbad;
 
 assign d3 = op_jnb    | 
             op_ljmp   | 
@@ -602,7 +603,8 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                                  op_clrb |
                                  op_cplb  |
                                  op_xchdi |
-                                 op_addci))  |
+                                 op_addci |
+                                 op_subbad))  |
                     (smf & uart_load_done)   |
                     (smd0  & ~(  op_xchar    |
                                  op_rl       |
@@ -651,7 +653,8 @@ assign pc_next    = (pc_ret_top                                   ) ? {i_data_da
                     (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
                     (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
                     (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck        ) ? pc - pc_twos - 'd1:
-                    (pc_jc_fwd | pc_jnc_fwd                       ) ? pc + pc_add - 'd2: 
+                    (pc_jnc_fwd                                   ) ? pc + pc_add: 
+                    (pc_jc_fwd                                    ) ? pc + pc_add : 
                     (pc_jz_fwd | pc_inc                           ) ? pc + pc_add:  
                                                                       pc;
 
@@ -708,7 +711,7 @@ end
 
 assign acc_sub = (op_subbai) ? h_data:
                  (op_subbar) ? r_sel:
-                 (op_subbad & (i_code_data != BB)) ? i_code_data: 
+                 (op_subbad & (i_code_data != BB)) ? i_data_data: 
                                b;
 
 assign acc_carry        = acc - carry;
@@ -764,13 +767,15 @@ end
 assign l_dptr_code =  (i_code_data == DPL);
 assign l_dptr_data =  (l_data== DPL);
 
-assign l_dptr_next = (op_movdi) ? i_code_data:
+assign l_dptr_next = (op_orldi) ? (l_dptr | l_data):
+                     (op_movdi) ? i_code_data:
                      (op_xchdi) ? acc:
                      (op_movda & l_dptr_code) ? acc:
                      l_dptr_code ? r_sel:
                      l_dptr_data ? i_data_data:
                                    l_data; 
 assign l_dptr_upd  = sme & (
+                     (op_orldi & (h_data == DPL)) |
                      (op_movdi & (h_data == DPL)) |
                      (op_xchdi & (h_data == DPL)) |
                      (op_movdp) |
@@ -781,13 +786,15 @@ assign l_dptr_upd  = sme & (
    assign h_dptr_code =  (i_code_data == DPH);
    assign h_dptr_data =  (l_data== DPH);
    
-   assign h_dptr_next = (op_movdi) ? i_code_data:
+   assign h_dptr_next = (op_orldi) ? (h_dptr | l_data): 
+                        (op_movdi) ? i_code_data:
                         (op_xchdi) ? acc:
                         (op_movda & h_dptr_code) ? acc:
                         h_dptr_code ? r_sel:
                         h_dptr_data ? i_data_data:
                                       h_data;
    assign h_dptr_upd  = sme & (
+                        (op_orldi & (h_data == DPH)) |
                         (op_movdi & (h_data == DPH)) |
                         (op_xchdi & (h_data == DPH)) | 
                         (op_movdp) |
@@ -811,7 +818,7 @@ assign l_dptr_upd  = sme & (
    // CARRY
   
    assign carry_next = (op_subbad & carry & d_acc) |
-                       (((op_subbad & d_bb) | op_subbar | op_subbai) & acc_sub_wrap[8]) |
+                       ((op_subbad | op_subbar | op_subbai) & acc_sub_wrap[8]) |
                        ((op_addai | op_inca | op_addar | op_addcr | op_addad) & acc_add_wrap[8]) |                      
                        (op_movcb & (i_code_data[7:3] == (ACC >> 3)) & acc[i_code_data[2:0]]) | 
                        (op_rrc & acc[0]) |
