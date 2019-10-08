@@ -639,7 +639,7 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                                  op_addcr));
 
 assign pc_add     = (pc_jnc_fwd              ) ? h_data[6:0] :  
-                    (pc_jc_fwd | pc_jnc_fwd  ) ? h_data[6:0] - 'd2:  
+                    (pc_jc_fwd | pc_jnc_fwd  ) ? h_data[6:0] :  
                     (pc_jz_fwd               ) ? i_code_data[6:0]:
                                                  'd1;
 
@@ -651,7 +651,8 @@ assign pc_next    = (pc_ret_top                                   ) ? {i_data_da
                     (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
                     (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
                     (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck        ) ? pc - pc_twos - 'd1:
-                    (pc_jc_fwd | pc_jnc_fwd | pc_jz_fwd | pc_inc  ) ? pc + pc_add:  
+                    (pc_jc_fwd | pc_jnc_fwd                       ) ? pc + pc_add - 'd2: 
+                    (pc_jz_fwd | pc_inc                           ) ? pc + pc_add:  
                                                                       pc;
 
 always@(posedge i_clk or negedge i_nrst) begin
