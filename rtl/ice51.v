@@ -603,8 +603,7 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                                  op_clrb |
                                  op_cplb  |
                                  op_xchdi |
-                                 op_addci |
-                                 op_subbad))  |
+                                 op_addci ))  |
                     (smf & uart_load_done)   |
                     (smd0  & ~(  op_xchar    |
                                  op_rl       |
@@ -638,7 +637,8 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                                  op_xrlda    |
                                  op_setbc    |
                                  op_push     |
-                                 op_addcr));
+                                 op_addcr    |
+                                 op_subbad));
 
 assign pc_add     = (pc_jnc_fwd              ) ? h_data[6:0] :  
                     (pc_jc_fwd | pc_jnc_fwd  ) ? h_data[6:0] :  
