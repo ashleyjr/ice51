@@ -20,10 +20,9 @@ fi
 ALL="all"
 if [[ "$1" == "$ALL" ]]; then
    echo ""
-   echo "--- Simulation begins ---"
+   echo ">>>>> Simulation begins <<<<<"
    for filename in verif/src/*.c; do
-      echo $filename 
-      echo -n -e " >\t\t\t"
+      printf "%s\t> " $filename | expand -t 30 
       ext=".hex"
       cp -f ${filename/\.c/$ext} load_mem.hex
       ext=".checks"
@@ -31,7 +30,7 @@ if [[ "$1" == "$ALL" ]]; then
       iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
       vvp ice51.dat -vcd | grep "PASSED\|ERROR" 
    done
-   echo "--- Simulation ends ---"
+   echo ">>>>> Simulation ends <<<<<"
    exit
 fi
 
