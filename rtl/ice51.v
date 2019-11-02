@@ -722,6 +722,7 @@ assign acc_add = (op_addci) ? h_data:
                  (op_addai) ? i_code_data: 
                  (op_addad & (h_data == ACC)) ? acc:
                  (op_addad & (h_data == DPH)) ? h_dptr:
+                 (op_addad & (h_data == DPL)) ? l_dptr:
                  (op_addad & (h_data == BB)) ? b:
                  (op_addad) ? i_data_data :
                  (op_addar | op_addcr) ? r_sel:
