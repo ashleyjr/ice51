@@ -821,7 +821,8 @@ assign l_dptr_upd  = sme & (
    assign carry_next = (op_subbad & carry & d_acc) |
                        ((op_subbad | op_subbar | op_subbai) & acc_sub_wrap[8]) |
                        ((op_addai | op_inca | op_addar | op_addcr | op_addad) & acc_add_wrap[8]) |                      
-                       (op_movcb & (i_code_data[7:3] == (ACC >> 3)) & acc[i_code_data[2:0]]) | 
+                       (op_movcb & ( ((i_code_data[7:3] == (ACC >> 3)) & acc[i_code_data[2:0]]) | 
+                                     ((i_code_data[7:3] == (BB >> 3))  & b[i_code_data[2:0]]))) |
                        (op_rrc & acc[0]) |
                        (op_rlc & acc[7]) | 
                        (op_cjnead & (acc < r_sel)) |
