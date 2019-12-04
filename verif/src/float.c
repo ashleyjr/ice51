@@ -2,11 +2,11 @@
 
 void main (void){        
    unsigned char i;
-   float a,b;
-   a = 7.7;
-   b = 1.2;
-   for(i=0;i<10;i++){
-      a += b;
+   float a;
+   a = 2;
+   // Loop to avoid opt 10.5 + 10.5
+   for(i=0;i<1;i++){
+      a += 2;
    }
    i = (unsigned char)a;
    *data = i;  
@@ -15,4 +15,4 @@ void main (void){
 }
 
 // Check Uart:
-// 10 
+// 4

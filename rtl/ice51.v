@@ -4,7 +4,7 @@ input    wire        i_nrst,
 input    wire        i_uart_rx,
 output   wire        o_uart_tx,
 output   wire        o_code_wr,
-output   wire  [8:0] o_code_addr,
+output   wire  [9:0] o_code_addr,
 output   wire  [7:0] o_code_data,
 input    wire  [7:0] i_code_data,
 output   wire        o_data_wr,
@@ -55,6 +55,7 @@ parameter   LJMP  = 8'h02, // ljmp addr16
             ADDCR = 8'h38, // addc a, r?
             JC    = 8'h40, // jc
             ORLDI = 8'h43, // orl (direct), #imm
+            ORLA  = 8'h44, // orl A, #imm
             JNC   = 8'h50, // jnc
             ANLAI = 8'h54, // anl a, #imm 
             XRLDA = 8'h62, // xrl d,a
@@ -72,6 +73,7 @@ parameter   LJMP  = 8'h02, // ljmp addr16
             MOVDT1= 8'h87, // mpv (direct), @r1
             MOVD  = 8'h88, // mov (direct), r?
             MOVDP = 8'h90, // mov dptr, #imm
+            MOVBC = 8'h92, // mov bit, C
             MOVC  = 8'h93, // movc a, @a+dptr
             SUBBAI= 8'h94, // subb a,#imm
             SUBBAD= 8'h95, // subb a, direct
@@ -85,14 +87,18 @@ parameter   LJMP  = 8'h02, // ljmp addr16
             PUSH  = 8'hC0, // push r?
             CLRB  = 8'hC2, // clr bit
             CLRC  = 8'hC3, // clr c
+            SWAP  = 8'hC4, // swap
             XCHDI = 8'hC5, // xch a, (direct)
             XCHAR = 8'hC8, // xch a r?
             POP   = 8'hD0, // pop
+            SETB  = 8'hD2, // setb bit 
             SETBC = 8'hD3, // setb c
             DJNZR = 8'hD8, // djnz r?, offset
             MOVXAD= 8'hE0, // movx a, @dptr
             CLRA  = 8'hE4, // clr a
             MOVAD = 8'hE5, // mov a, direct
+            MOVA0 = 8'hE6, // mov a, @r0
+            MOVA1 = 8'hE7, // mov a, @r1
             MOVAR = 8'hE8, // mov a, r?
             MOVXDA= 8'hF0, // movx @dptr, a
             CPLA  = 8'hF4, // cpl a
@@ -104,12 +110,14 @@ parameter   LJMP  = 8'h02, // ljmp addr16
 parameter   SP    = 8'h81,
             DPL   = 8'h82,
             DPH   = 8'h83,
+            PSW   = 8'hD0,
             ACC   = 8'hE0,
             BB    = 8'hF0;
 
 // BIT
-parameter   BIT_F0 = 8'hD5,
-            BIT_ACC = 8'hE0;
+parameter   BIT_F0   = 8'hD5,
+            BIT_F1   = 8'hD1,
+            BIT_ACC  = 8'hE0;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // SIGNALS
@@ -154,16 +162,16 @@ reg   [2:0]                   state;
 wire  [2:0]                   state_next;
 
 // PROGRAM COUNTER
-reg   [8:0]                   pc;
-wire  [8:0]                   pc_next;
+reg   [9:0]                   pc;
+wire  [9:0]                   pc_next;
 wire  [6:0]                   pc_twos;  
 wire  [6:0]                   pc_n_l_data7;
 wire  [6:0]                   pc_n_h_data7;
 wire  [8:0]                   pc_bck_l_data;
 wire  [8:0]                   pc_bck_h_data;
 wire  [6:0]                   pc_add;
-wire  [8:0]                   pc_1;
-wire  [8:0]                   pc_2;
+wire  [9:0]                   pc_1;
+wire  [9:0]                   pc_2;
 
 // REGS
 wire                          r_upd;
@@ -181,6 +189,7 @@ wire  [8:0]                   acc_add_wrap;
 wire  [7:0]                   acc_add;
 wire  [7:0]                   acc_sub;
 wire  [8:0]                   acc_carry;
+wire  [3:0]                   acc_xor;
 wire                          acc_zero;
 
 // DPTR
@@ -198,6 +207,7 @@ wire                          carry_upd;
 // B
 reg   [7:0]                   b;
 wire  [7:0]                   b_next;
+wire  [7:0]                   b_mask;
 
 // SP
 reg   [7:0]                   sp;
@@ -209,6 +219,9 @@ wire                          sp_upd;
 // F
 reg                           f;
 wire                          f_next;
+reg                           f1;
+wire                          f1_next;
+
 
 // DIV
 wire  [8:0]                   div_shift;
@@ -388,7 +401,9 @@ assign o_data_wr   = (op_movdd & smd2 & (l_data != DPL) & (l_data != DPH) & (l_d
                         (op_orldi & (h_data != DPH) & (h_data != DPL) & (h_data > 8'h07)) |
                         (op_movd & (i_code_data > 8'h07))
                      );
-assign o_data_addr = (op_orldi)               ? h_data:
+assign o_data_addr = (op_mova0              ) ? r[0]:
+                     (op_mova1              ) ? r[1]:
+                     (op_orldi)               ? h_data:
                      (op_incd & (smd1 | sme)) ? h_data:
                      (op_movdt0             ) ? r[0]:
                      (op_movdt1 | op_movt1a ) ? r[1]:
@@ -404,10 +419,11 @@ assign o_data_data = (op_orldi & (h_data > 8'h07)) ? (i_data_data | l_data):
                      (op_movdd & (h_data == BB)) ? b:
                      (op_movdd         ) ? i_data_data:
                      (op_push & (h_data == BB)) ? b:
+                     (op_push & (h_data == ACC)) ? acc:
                      (op_movd | op_push) ? r_sel: 
                      (op_movdi         ) ? i_code_data:
                      (op_lcall & smd0    ) ? pc_2[7:0]:
-                     (op_lcall & smd1    ) ? {7'h00, pc_1[8]}:
+                     (op_lcall & smd1    ) ? {6'h00, pc_1[9:8]}:
                                            acc;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -478,6 +494,12 @@ assign op_orldi   = (op == ORLDI);
 assign op_jnz     = (op == JNZ);
 assign op_xchar   = (op5 == (XCHAR >> 3));
 assign op_djnzr   = (op5 == (DJNZR >> 3));
+assign op_movbc   = (op == MOVBC);
+assign op_setb    = (op == SETB);
+assign op_mova0   = (op == MOVA0);
+assign op_mova1   = (op == MOVA1);
+assign op_swap    = (op == SWAP);
+assign op_orla    = (op == ORLA);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // DIRECTS
@@ -513,7 +535,9 @@ assign d1 = op_xrla   |
             op_xchdi |
             op_addci |
             op_incd |
-            op_subbad;
+            op_subbad |
+            op_movbc |
+            op_setb;
 
 assign d3 = op_jnb    | 
             op_ljmp   | 
@@ -525,7 +549,8 @@ assign d3 = op_jnb    |
             op_lcall  |
             op_ret   |
             op_cjnead |
-            op_orldi;
+            op_orldi |
+            op_swap;
 
 assign state_next = (smf  & uart_load_done         ) ? SM_DECODE0:  
                     (smd0 & (d3 | d1)              ) ? SM_DECODE1:  
@@ -565,7 +590,8 @@ assign pc_jb_fwd        = pc_jb & ~l_data[7];
 
 assign pc_jnb           = sme & op_jnb & (
                            (~acc[h_data[2:0]] & (h_data[7:3] == (BIT_ACC >> 3))) |
-                           ((f == 1'b0) & (h_data == BIT_F0))  
+                           ((f == 1'b0) & (h_data == BIT_F0)) | 
+                           ((f1 == 1'b0) & (h_data == BIT_F1)) 
                         );
 
 assign pc_jc            = sme & op_jc & carry;
@@ -584,6 +610,8 @@ assign pc_cjne_bck      = (pc_cjne | pc_cjnead) & l_data[7];
 assign pc_cjne_fwd      = (pc_cjne | pc_cjnead) & ~l_data[7]; 
 
 assign pc_cjnead        = sme & op_cjnead & ( 
+                           ((h_data == DPL) & (l_dptr != acc)) |
+                           ((h_data == DPH) & (h_dptr != acc)) |
                            ((h_data > 8'h07) & (i_data_data != acc)) |
                            ((h_data < 8'h08) & (r_sel != acc)));
 
@@ -603,13 +631,17 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                                  op_clrb |
                                  op_cplb  |
                                  op_xchdi |
-                                 op_addci ))  |
+                                 op_addci |
+                                 op_movbc |
+                                 op_setb | 
+                                 op_swap))  |
                     (smf & uart_load_done)   |
                     (smd0  & ~(  op_xchar    |
                                  op_rl       |
                                  op_div      |
                                  op_mul      | 
                                  op_rlc      |
+                                 op_rrc      |
                                  op_clrc     |
                                  op_jc       |
                                  op_jnc      |
@@ -623,69 +655,75 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                                  op_inca     |
                                  op_movri    |
                                  op_clra     |
-                                 op_movad    |
-                                 op_movc     |
-                                 op_addad    |
-                                 op_movra    |
-                                 op_movxda   |
-                                 op_movxad   |
-                                 op_movar    |
-                                 op_xrla     |
-                                 op_subbai   |
-                                 op_subbar   |
-                                 op_addar    |
-                                 op_xrlda    |
-                                 op_setbc    |
-                                 op_push     |
-                                 op_addcr    |
-                                 op_subbad));
+                              op_movad    |
+                              op_movc     |
+                              op_addad    |
+                              op_movra    |
+                              op_movxda   |
+                              op_movxad   |
+                              op_movar    |
+                              op_xrla     |
+                              op_subbai   |
+                              op_subbar   |
+                              op_addar    |
+                              op_xrlda    |
+                              op_setbc    |
+                              op_push     |
+                              op_addcr    |
+                              op_subbad   |
+                              op_mova0    |
+                              op_mova1    | 
+                              op_swap));
 
 assign pc_add     = (pc_jnc_fwd              ) ? h_data[6:0] :  
-                    (pc_jc_fwd | pc_jnc_fwd  ) ? h_data[6:0] :  
-                    (pc_jz_fwd               ) ? i_code_data[6:0]:
-                                                 'd1;
+                 (pc_jc_fwd | pc_jnc_fwd  ) ? h_data[6:0] :  
+                 (pc_jz_fwd               ) ? i_code_data[6:0]:
+                                              'd1;
 
 assign pc_next    = (pc_ret_top                                   ) ? {i_data_data, pc[7:0]}: 
-                    (pc_ret_bot                                   ) ? {pc[15:8], i_data_data}:
-                    (pc_jnb | pc_jb_fwd | pc_cjne_fwd             ) ? pc + l_data[6:0]:
-                    (pc_bck                                       ) ? pc - pc_twos - 'd1:
-                    (pc_replace                                   ) ? hl_data:
-                    (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
-                    (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
-                    (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck        ) ? pc - pc_twos - 'd1:
-                    (pc_jnc_fwd                                   ) ? pc + pc_add: 
-                    (pc_jc_fwd                                    ) ? pc + pc_add : 
-                    (pc_jz_fwd | pc_inc                           ) ? pc + pc_add:  
-                                                                      pc;
+                 (pc_ret_bot                                   ) ? {pc[15:8], i_data_data}:
+                 (pc_jnb | pc_jb_fwd | pc_cjne_fwd             ) ? pc + l_data[6:0]:
+                 (pc_bck                                       ) ? pc - pc_twos - 'd1:
+                 (pc_fwd                                       ) ? pc + i_code_data:
+                 (pc_replace                                   ) ? hl_data:
+                 (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
+                 (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
+                 (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck        ) ? pc - pc_twos - 'd1:
+                 (pc_jnc_fwd                                   ) ? pc + pc_add: 
+                 (pc_jc_fwd                                    ) ? pc + pc_add : 
+                 (pc_jz_fwd | pc_inc                           ) ? pc + pc_add:  
+                                                                   pc;
 
 always@(posedge i_clk or negedge i_nrst) begin
-   if(!i_nrst)    pc  <= 'd0;
-   else           pc  <= pc_next;
+if(!i_nrst)    pc  <= 'd0;
+else           pc  <= pc_next;
 end
- 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // REGS
 
 assign r_next = op_xchar                                    ? acc:
-                (op_movrd & (h_data == DPH)               ) ? h_dptr:
-                (op_movrd & (h_data == DPL)               ) ? l_dptr:
-                (op_movrd & (h_data == BB)                ) ? b:
-                (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
-                op_orldi                                    ? (r_sel | l_data):
-                op_xrlda                                    ? (acc ^ r_sel):      
-                op_movri                                    ? h_data:
-                op_incr                                     ? (r_sel + 'd1):
-                (op_decr | op_djnzr)                        ? (r_sel - 'd1):
-                op_movra                                    ? acc: 
-                                                              r_sel;
+             (op_movrd & (h_data == DPH)               ) ? h_dptr:
+             (op_movrd & (h_data == DPL)               ) ? l_dptr:
+             (op_movrd & (h_data == BB)                ) ? b:
+             (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
+             op_orldi                                    ? (r_sel | l_data):
+             op_xrlda                                    ? (acc ^ r_sel):      
+             op_movri                                    ? h_data:
+             op_incr                                     ? (r_sel + 'd1):
+             (op_decr | op_djnzr)                        ? (r_sel - 'd1):
+             op_movra                                    ? acc: 
+                                                           r_sel;
 
-assign r_upd  = sme & (op_movra | op_decr | op_incr | op_movri | op_xrlda | op_movdt0 | op_movdt1 | op_movrd | 
-                       op_djnzr |
-                        op_xchar |
-                        (op_orldi & (h_data < 8'h08)) | 
-                       (op_pop & (h_data < 8'h08)) | 
-                       (op_movd & (i_code_data < 8'h08)));
-  
+assign r_upd  = sme & (op_movra | op_decr | op_incr | op_movri | op_xrlda  | op_movrd | 
+                    op_djnzr |
+                     op_xchar |
+                     (op_movdt0 & (h_data < 8'h08)) | 
+                     (op_movdt1 & (h_data < 8'h08)) | 
+                    (op_orldi & (h_data < 8'h08)) | 
+                    (op_pop & (h_data < 8'h08)) | 
+                    (op_movd & (i_code_data < 8'h08)));
+
 assign r_index =  (op_movdt0 | op_movdt1 | op_xrlda | op_push | op_pop | op_pop | op_orldi) ? h_data[2:0] : op[2:0];
 
 assign r_sel  = r[r_index];
@@ -693,15 +731,15 @@ assign r_sel  = r[r_index];
 assign r_next_index = (op_movd) ? i_code_data[2:0] : r_index;
 
 always@(posedge i_clk or negedge i_nrst) begin
-   if(!i_nrst)    {  r[0],
-                     r[1],
-                     r[2],
-                     r[3],
-                     r[4],
-                     r[5],
-                     r[6],
-                     r[7]  }     <= 'd0;
-   else if(r_upd)    r[r_next_index]  <= r_next;
+if(!i_nrst)    {  r[0],
+                  r[1],
+                  r[2],
+                  r[3],
+                  r[4],
+                  r[5],
+                  r[6],
+                  r[7]  }     <= 'd0;
+else if(r_upd)    r[r_next_index]  <= r_next;
 end
 
 
@@ -710,29 +748,35 @@ end
 
 
 assign acc_sub = (op_subbai) ? h_data:
-                 (op_subbar) ? r_sel:
-                 (op_subbad & (i_code_data != BB)) ? i_data_data: 
-                               b;
+              (op_subbar) ? r_sel:
+              (op_subbad & (i_code_data != BB)) ? i_data_data: 
+                            b;
 
 assign acc_carry        = acc - carry;
 assign acc_sub_wrap     = acc_carry - acc_sub; 
 
 assign acc_add = (op_addci) ? h_data:
-                 (op_addcd) ? b: 
-                 (op_addai) ? i_code_data: 
-                 (op_addad & (h_data == ACC)) ? acc:
-                 (op_addad & (h_data == DPH)) ? h_dptr:
-                 (op_addad & (h_data == DPL)) ? l_dptr:
-                 (op_addad & (h_data == BB)) ? b:
-                 (op_addad) ? i_data_data :
-                 (op_addar | op_addcr) ? r_sel:
-                              {7'h00, op_inca}; 
+              (op_addcd) ? b: 
+              (op_addai) ? i_code_data: 
+              (op_addad & (h_data == ACC)) ? acc:
+              (op_addad & (h_data == DPH)) ? h_dptr:
+              (op_addad & (h_data == DPL)) ? l_dptr:
+              (op_addad & (h_data == BB)) ? b:
+              (op_addad) ? i_data_data :
+              (op_addar | op_addcr) ? r_sel:
+                           {7'h00, op_inca}; 
 
 assign acc_add_wrap = acc + acc_add + (carry & (op_addci | op_addcd | op_addcr));
 
 assign acc_zero = (acc == 'd0);
 
-assign acc_next = (op_anlai                                 ) ? (acc & i_code_data):
+assign acc_xor = acc[7:4] ^ acc[3:0];
+
+assign acc_next = (op_orla                                  ) ? (acc | i_code_data): 
+                  (op_swap & smd2                           ) ? {acc[7:4], acc_xor }: 
+                  (op_swap                                  ) ? {acc_xor,  acc[3:0]}:
+                  (op_setb & (h_data[7:3] == (BIT_ACC >> 3))) ? (acc | (1'b1 << h_data[2:0])):
+                  (op_anlai                                 ) ? (acc & i_code_data):
                   (op_xchdi & (h_data == BB)                ) ? b:
                   (op_xchdi & (h_data == DPL)               ) ? l_dptr:
                   (op_xchdi & (h_data == DPH)               ) ? h_dptr:
@@ -745,9 +789,11 @@ assign acc_next = (op_anlai                                 ) ? (acc & i_code_da
                   (op_rrc                                   ) ? {carry,    acc[7:1]}: 
                   (op_rlc                                   ) ? {acc[6:0], carry}: 
                   (op_movad & (h_data == BB)                ) ? b:
+                  (op_movad & (h_data == PSW)               ) ? {1'b0, f, 4'b000, f1, 1'b0}:
                   (op_movad & (h_data == DPH)               ) ? dptr[15:8]:
                   (op_movad & (h_data == DPL)               ) ? dptr[7:0]:
-                  (op_movad                                 ) ? i_data_data:
+                  (op_movad & (h_data == SP)                ) ? sp:
+                  (op_movad | op_mova0 | op_mova1           ) ? i_data_data:
                   (op_xrla                                  ) ? (acc ^ h_data): 
                   (op_subbad & d_acc                        ) ? (8'h00 - carry):
                   (op_movar                                 ) ? r_sel: 
@@ -757,9 +803,11 @@ assign acc_next = (op_anlai                                 ) ? (acc & i_code_da
                   (op_movxad & (dptr == 16'h200)            ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
                                                                 acc_add_wrap[7:0];
 
+assign acc_upd = sme | (op_swap & (smd1 | smd2));
+
 always@(posedge i_clk or negedge i_nrst) begin
-   if(!i_nrst)    acc <= 'd0;
-   else if(sme)   acc <= acc_next;
+   if(!i_nrst)       acc <= 'd0;
+   else if(acc_upd)  acc <= acc_next;
 end
  
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -839,7 +887,11 @@ assign l_dptr_upd  = sme & (
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // B
  
-   assign b_next = (op_pop & (h_data == BB)) ? i_data_data:
+   assign b_next = (op_setb & ((h_data >> 3) == (BB >> 3)))  ? b | (1'b1 << h_data[2:0]): 
+                   (op_movbc & ((h_data >> 3) == (BB >> 3)))  ? b_mask: 
+                   (op_movdt0 & (h_data == BB) ) ? i_data_data:
+                   (op_movdt1 & (h_data == BB) ) ? i_data_data: 
+                   (op_pop & (h_data == BB)    ) ? i_data_data:
                    (op_movdd & (l_data == BB)  ) ? i_data_data:
                    (op_xchdi & (h_data == BB)  ) ? acc:  
                    (op_mul & mul_done          ) ? mul_ab[15:8]:
@@ -849,6 +901,9 @@ assign l_dptr_upd  = sme & (
                    (op_xrldi & (h_data == BB)  ) ? b ^ l_data:
                                                    b;
 
+   assign b_mask = (b[h_data[2:0]]) ? (b & ~(~carry << h_data[2:0])):
+                                      (b |  (carry << h_data[2:0]));
+   
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst)    b <= 'd0;
       else if(sme)   b <= b_next;
@@ -859,7 +914,8 @@ assign l_dptr_upd  = sme & (
   
    assign sp_inc  = sp + 1;
    assign sp_dec  = sp - 1;
-   assign sp_next = ((sme & op_push) | (op_lcall & (smd0 | smd1))) ? sp_inc : 
+   assign sp_next = (sme & op_movda & (h_data == SP))              ? acc:
+                    ((sme & op_push) | (op_lcall & (smd0 | smd1))) ? sp_inc : 
                     ((sme & op_pop)  | ((smd0 | smd1) & op_ret)  ) ? sp_dec :
                     (sme & op_movdi & (h_data == SP))              ? i_code_data:
                                                                      sp;
@@ -868,11 +924,30 @@ assign l_dptr_upd  = sme & (
       if(!i_nrst) sp <= 8'h07;
       else        sp <= sp_next;
    end
-    
+   
+
+
+
+
+
+
+   // TODO: Replace with PSW
+
+
+
+
+
+
+
+
+
+
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // F
   
-   assign f_next =   (op_clrb & (h_data == BIT_F0)) ? 1'b0:
+   assign f_next =   (op_movbc & (h_data == BIT_F0)) ? carry: 
+                     (op_clrb & (h_data == BIT_F0)) ? 1'b0:
                      (op_cplb & (h_data == BIT_F0)) ? ~f:
                                                       f;
    
@@ -880,6 +955,20 @@ assign l_dptr_upd  = sme & (
       if(!i_nrst)    f <= 1'b0;
       else if(sme)   f <= f_next;
    end 
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////
+   // F1
+  
+   assign f1_next =  (op_movbc & (h_data == BIT_F1)) ? carry: 
+                     (op_clrb & (h_data == BIT_F1))  ? 1'b0:
+                     (op_cplb & (h_data == BIT_F1))  ? ~f1:
+                                                        f1;
+   
+   always@(posedge i_clk or negedge i_nrst) begin
+      if(!i_nrst)    f1 <= 1'b0;
+      else if(sme)   f1 <= f1_next;
+   end 
+
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////
    // DIV

@@ -6,7 +6,7 @@ module ice51_tb;
 	parameter   CLK_PERIOD_NS = 83;
 
    // Mem size
-   parameter   MEM_SIZE = 512;
+   parameter   MEM_SIZE = 1024;
 
    // Check size
    parameter   CHECK_SIZE = 128;
@@ -47,9 +47,9 @@ module ice51_tb;
    initial begin 
       $readmemh("load_mem.hex",  load_mem);
       $readmemh("checks.hex",    uart_checks);
-      // for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
-      // for(i=0;i<CHECK_SIZE;i=i+1)   $dumpvars(0,ice51_tb.uart_checks[i]); 
-      // for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.ice51_top.code.mem[i]); 
+       //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
+       //for(i=0;i<CHECK_SIZE;i=i+1)   $dumpvars(0,ice51_tb.uart_checks[i]); 
+       //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.ice51_top.code.mem[i]); 
       for(i=0;i<8;i=i+1)               $dumpvars(0,ice51_tb.ice51_top.ice51.r[i]); 
    end
   	

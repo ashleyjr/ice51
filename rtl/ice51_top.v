@@ -5,7 +5,7 @@ module ice51_top(
    output   wire        o_uart_tx 
 );
    wire        code_wr;
-   wire  [8:0] code_addr;
+   wire  [9:0] code_addr;
    wire  [7:0] code_data_wr;
    wire  [7:0] code_data_rd;
 
@@ -30,7 +30,7 @@ module ice51_top(
       .i_data_data   (data_data_rd  )
    );
 
-   mem_512x8b code(
+   mem_1024x8b code(
       .i_clk   (i_clk            ),
       .i_nrst  (i_nrst           ),
       .i_we    (code_wr          ),
