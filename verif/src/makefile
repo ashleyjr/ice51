@@ -1,8 +1,9 @@
 CC  	:= sdcc
 SRC 	:= $(wildcard *.c)
 OBJ 	:= $(patsubst %.c,%.hex,$(SRC))
+DBG 	:= $(patsubst %.c,%.disasm,$(SRC))
 
-all: $(OBJ)
+all: $(OBJ) $(DBG)
 
 .SECONDARY:
 
@@ -13,6 +14,10 @@ all: $(OBJ)
 %.hex: %.ihx
 	python ../utils/output_hex.py $< > $@
 
+%.disasm: %.ihx
+	/usr/share/sdcc/scripts/mcs51-disasm.pl $< > $@
+
+
 .PHONY: clean
 clean:
-	rm -f *.checks *.hex *.asm *.ihx *.lk *.lst *.map *.mem *.rel *.rst *.sym
+	rm -f *.checks *.hex *.asm *.ihx *.lk *.lst *.map *.mem *.rel *.rst *.sym *.disasm
