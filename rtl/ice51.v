@@ -873,6 +873,8 @@ assign l_dptr_upd  = sme & (
                                      ((i_code_data[7:3] == (BB >> 3))  & b[i_code_data[2:0]]))) |
                        (op_rrc & acc[0]) |
                        (op_rlc & acc[7]) | 
+                       (op_cjnead & (h_data == DPH) & (acc < h_dptr)) |
+                       (op_cjnead & (h_data == DPL) & (acc < l_dptr)) |
                        (op_cjnead & (acc < r_sel)) |
                        (op_cjneri & (r_sel < h_data)) |
                        op_setbc;
