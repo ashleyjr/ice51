@@ -8,11 +8,11 @@ all: $(OBJ) $(DBG)
 .SECONDARY:
 
 %.ihx: %.c
-	python ../utils/output_checks.py $< 
-	$(CC) $< -I ../inc/
+	python ~/ice51/verif//utils/output_checks.py $< 
+	$(CC) $< -I ~/ice51/verif/inc/
 	
 %.hex: %.ihx
-	python ../utils/output_hex.py $< > $@
+	python ~/ice51/verif/utils/output_hex.py $< > $@
 
 %.disasm: %.ihx
 	/usr/share/sdcc/scripts/mcs51-disasm.pl $< > $@

@@ -1,27 +1,54 @@
 #!/bin/bash
+
+###########################################################
+# Make/clean
 CMD="cd verif/src"
 echo $CMD
 $CMD
 
-CMD="make"
-echo $CMD
-$CMD
+for d in *; do
+   if [ -d "$d" ]; then
+      CMD="cd $d"
+      echo "$CMD"
+      $CMD
+      CLEAN="clean"
+      CMD="make"
+      if [[ "$1" == "$CLEAN" ]]; then
+         CMD="make clean"
+      fi
+      echo $CMD
+      $CMD
+      cd ..
+   fi
+done 
 
 CMD="cd ../.."
 echo $CMD
 $CMD
 
+MAKE="make"
+if [[ "$1" == "$MAKE" ]]; then
+   exit
+fi
+
+CLAN="clean"
+if [[ "$1" == "$CLEAN" ]]; then
+   exit
+fi
+###########################################################
+# Preload flag
 PRELOAD="preload"
 if [[ "$2" == "$PRELOAD" ]]; then
    P_PRELOAD=" -D PRELOAD"
 fi
 
+###########################################################
 # Run all tests add check for pass fail
 ALL="all"
 if [[ "$1" == "$ALL" ]]; then
    echo ""
    echo ">>>>> Simulation begins <<<<<"
-   for filename in verif/src/*.c; do
+   for filename in verif/src/*/*.c; do
       printf "%s\t> " $filename | expand -t 30 
       ext=".hex"
       cp -f ${filename/\.c/$ext} load_mem.hex
@@ -34,6 +61,7 @@ if [[ "$1" == "$ALL" ]]; then
    exit
 fi
 
+###########################################################
 # Run a single test
 ext=".hex"
 CMD="cp -f ${1/\.c/$ext} load_mem.hex"
