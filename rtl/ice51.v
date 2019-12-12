@@ -681,29 +681,28 @@ assign pc_inc     = (smd1 & ~(  op_movrd |
                               op_mova1    | 
                               op_swap));
 
-assign pc_add     = (pc_jnc_fwd              ) ? h_data[6:0] :  
-                 (pc_jc_fwd | pc_jnc_fwd  ) ? h_data[6:0] :  
-                 (pc_jz_fwd | pc_jnz_fwd   ) ? i_code_data[6:0]:
-                                              'd1;
+assign pc_add_l_data    = pc_jnb     | pc_jb_fwd  | pc_cjne_fwd;
+assign pc_add_h_data    = pc_jnc_fwd | pc_jc_fwd; 
+assign pc_add_code_data = pc_jz_fwd  | pc_jnz_fwd | pc_fwd;
 
-assign pc_next    = (pc_ret_top                                   ) ? {i_data_data, pc[7:0]}: 
-                 (pc_ret_bot                                   ) ? {pc[15:8], i_data_data}:
-                 (pc_jnb | pc_jb_fwd | pc_cjne_fwd             ) ? pc + l_data[6:0]:
-                 (pc_bck                                       ) ? pc - pc_twos - 'd1:
-                 (pc_fwd                                       ) ? pc + i_code_data:
-                 (pc_replace                                   ) ? hl_data:
-                 (pc_jb_bck | pc_cjne_bck                      ) ? pc_bck_l_data:
-                 (pc_jc_bck | pc_jnc_bck                       ) ? pc_bck_h_data: 
-                 (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck        ) ? pc - pc_twos - 'd1:
-                 (pc_jnc_fwd                                   ) ? pc + pc_add: 
-                 (pc_jc_fwd                                    ) ? pc + pc_add : 
-                 (pc_jnz_fwd                                   ) ? pc + pc_add : 
-                 (pc_jz_fwd | pc_inc                           ) ? pc + pc_add:  
-                                                                   pc;
+assign pc_add  =  (pc_add_l_data    ) ? l_data[6:0]:
+                  (pc_add_h_data    ) ? h_data[6:0] :  
+                  (pc_add_code_data ) ? i_code_data[6:0]:
+                                       'd1;
+
+assign pc_next =  (pc_ret_top                                                 ) ? {i_data_data, pc[7:0]}: 
+                  (pc_ret_bot                                                 ) ? {pc[15:8], i_data_data}: 
+                  (pc_bck                                                     ) ? pc - pc_twos - 'd1: 
+                  (pc_replace                                                 ) ? hl_data:
+                  (pc_jb_bck | pc_cjne_bck                                    ) ? pc_bck_l_data:
+                  (pc_jc_bck | pc_jnc_bck                                     ) ? pc_bck_h_data: 
+                  (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck                      ) ? pc - pc_twos - 'd1:
+                  (pc_add_l_data | pc_add_h_data | pc_add_code_data | pc_inc  ) ? pc + pc_add:  
+                                                                                  pc;
 
 always@(posedge i_clk or negedge i_nrst) begin
-if(!i_nrst)    pc  <= 'd0;
-else           pc  <= pc_next;
+   if(!i_nrst)    pc  <= 'd0;
+   else           pc  <= pc_next;
 end
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
