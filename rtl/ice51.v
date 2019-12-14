@@ -666,14 +666,12 @@ assign r_next = op_xchar                                    ? acc:
                                                            r_sel;
 assign h_reg = (h_data < 8'h08);
 
-assign r_upd  = sme & (op_movra | op_decr | op_incr | op_movri | op_xrlda  | op_movrd | 
-                    op_djnzr |
-                     op_xchar |
-                     (op_movdt0 & h_reg) | 
-                     (op_movdt1 & h_reg) | 
-                    (op_orldi & h_reg) | 
-                    (op_pop & h_reg) | 
-                    (op_movd & (i_code_data < 8'h08)));
+assign r_upd  = 
+   sme & (
+      op_movra | op_decr | op_incr | op_movri | op_xrlda  | op_movrd | op_djnzr | op_xchar |
+      ((op_movdt0 | op_movdt1 | op_orldi | op_pop) & h_reg) | 
+      (op_movd & (i_code_data < 8'h08))
+   );
 
 assign r_index =  (op_movdt0 | op_movdt1 | op_xrlda | op_push | op_pop | op_pop | op_orldi) ? h_data[2:0] : op[2:0];
 
