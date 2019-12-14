@@ -249,6 +249,89 @@ reg   [15:0]                  mul_ab;
 wire  [15:0]                  mul_ab_next;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// OPS
+
+assign op_ljmp    = (op == LJMP);
+assign op_movdi   = (op == MOVDI);
+assign op_lcall   = (op == LCALL);
+assign op_movad   = (op == MOVAD);
+assign op_sjmp    = (op == SJMP);
+assign op_movdp   = (op == MOVDP);
+assign op_clra    = (op == CLRA);
+assign op_movc    = (op == MOVC);
+assign op_movra   = (op5 == (MOVRA >> 3));
+assign op_movai   = (op == MOVAI);
+assign op_movd    = (op5  == (MOVD >> 3));
+assign op_movxda  = (op == MOVXDA);
+assign op_movxad  = (op == MOVXAD);
+assign op_movar   = (op5 == (MOVAR >> 3));
+assign op_jb      = (op == JB);
+assign op_incr    = (op5 == (INCR >> 3));
+assign op_xrla    = (op == XRLA); 
+assign op_subbai  = (op == SUBBAI);
+assign op_movri   = (op5 == (MOVRI >> 3));
+assign op_jc      = (op == JC); 
+assign op_addar   = (op5 == (ADDAR >> 3)); 
+assign op_xrlda   = (op == XRLDA); 
+assign op_movda   = (op == MOVDA);
+assign op_addad   = (op == ADDAD);
+assign op_addai   = (op == ADDAI);
+assign op_deca    = (op == DECA);
+assign op_movdt0  = (op == MOVDT0);
+assign op_movdt1  = (op == MOVDT1);
+assign op_movt1a  = (op == MOVT1A);
+assign op_cjneri  = (op5 == (CJNERI >> 3));
+assign op_clrc    = (op == CLRC); 
+assign op_jnb     = (op == JNB);
+assign op_rlc     = (op == RLC);
+assign op_subbad  = (op == SUBBAD);
+assign op_movrd   = (op5 == (MOVRD >> 3));
+assign op_movdd   = (op == MOVDD);
+assign op_jnc     = (op == JNC);
+assign op_subbar  = (op5 == (SUBBAR >> 3));
+assign op_xrldi   = (op == XRLDI); 
+assign op_jz      = (op == JZ); 
+assign op_mul     = (op == MUL);
+assign op_div     = (op == DIV);
+assign op_cpla    = (op == CPLA);
+assign op_decr    = (op5 == (DECR >> 3));
+assign op_inca    = (op == INCA);
+assign op_setbc   = (op == SETBC);
+assign op_push    = (op == PUSH);
+assign op_pop     = (op == POP);
+assign op_ret     = (op == RET);
+assign op_xchdi   = (op == XCHDI);
+assign op_clrb    = (op == CLRB);
+assign op_cplb    = (op == CPLB);
+assign op_addci   = (op == ADDCI);
+assign op_addcd   = (op == ADDCD);
+assign op_addcr   = (op5 == (ADDCR >> 3));
+assign op_incd    = (op == INCD);
+assign op_cjnead  = (op == CJNEAD);
+assign op_rrc     = (op == RRC);
+assign op_movcb   = (op == MOVCB);
+assign op_rl      = (op == RL);
+assign op_anlai   = (op == ANLAI);
+assign op_orldi   = (op == ORLDI);
+assign op_jnz     = (op == JNZ);
+assign op_xchar   = (op5 == (XCHAR >> 3));
+assign op_djnzr   = (op5 == (DJNZR >> 3));
+assign op_movbc   = (op == MOVBC);
+assign op_setb    = (op == SETB);
+assign op_mova0   = (op == MOVA0);
+assign op_mova1   = (op == MOVA1);
+assign op_swap    = (op == SWAP);
+assign op_orla    = (op == ORLA);
+assign op_cjneai  = (op == CJNEAI);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// DIRECTS
+
+assign d_bb  = (i_code_data == BB);
+assign d_acc = (i_code_data == ACC);
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 // UART RX
 
 // Resync
@@ -387,123 +470,48 @@ end
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // DATA
 
-assign o_data_wr   = (op_movdd & smd2 & (l_data != DPL) & (l_data != DPH) & (l_data != BB)) |
-                     (op_lcall & (smd0 | smd1)) |
-                     sme & (
-                        op_incd |
-                        (op_movda & ~d_bb) | 
-                        (op_movdi & ~d_bb) | 
-                        op_push |
-                        op_movt1a |
-                        (op_orldi & (h_data != DPH) & (h_data != DPL) & (h_data > 8'h07)) |
-                        (op_movd & (i_code_data > 8'h07))
-                     );
-assign o_data_addr = (op_mova0              ) ? r[0]:
-                     (op_mova1              ) ? r[1]: 
-                     (op_incd & (smd1 | sme)) ? h_data:
-                     (op_movdt0             ) ? r[0]:
-                     (op_movdt1 | op_movt1a ) ? r[1]:
-                     (op_movdd & smd2 & (l_data != DPL) & (l_data != DPH) & (l_data != BB))       ? l_data: 
-                     (op_movdi  | op_movdd  | op_cjnead | op_orldi) ? h_data:
-                     (op_push | op_lcall    ) ? sp_inc:
-                     (op_ret | op_pop       ) ? sp:
-                                                i_code_data; 
-assign o_data_data = (op_orldi & (h_data > 8'h07)) ? (i_data_data | l_data):
-                     (op_movdd & (h_data == DPH)) ? h_dptr:
-                     (op_movdd & (h_data == DPL)) ? l_dptr:
-                     (op_incd & sme) ? (i_data_data + 'd1):
-                     (op_movdd & (h_data == BB)) ? b:
-                     (op_movdd         ) ? i_data_data:
-                     (op_push & (h_data == BB)) ? b:
-                     (op_push & (h_data == ACC)) ? acc:
-                     (op_movd | op_push) ? r_sel: 
-                     (op_movdi         ) ? i_code_data:
-                     (op_lcall & smd0    ) ? pc_2[7:0]:
-                     (op_lcall & smd1    ) ? {6'h00, pc_1[9:8]}:
-                                           acc;
+assign hdpl = (h_data == DPL);
+assign hdph = (h_data == DPH);
+assign hout = (h_data > 8'h07);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// OPS
-
-assign op_ljmp    = (op == LJMP);
-assign op_movdi   = (op == MOVDI);
-assign op_lcall   = (op == LCALL);
-assign op_movad   = (op == MOVAD);
-assign op_sjmp    = (op == SJMP);
-assign op_movdp   = (op == MOVDP);
-assign op_clra    = (op == CLRA);
-assign op_movc    = (op == MOVC);
-assign op_movra   = (op5 == (MOVRA >> 3));
-assign op_movai   = (op == MOVAI);
-assign op_movd    = (op5  == (MOVD >> 3));
-assign op_movxda  = (op == MOVXDA);
-assign op_movxad  = (op == MOVXAD);
-assign op_movar   = (op5 == (MOVAR >> 3));
-assign op_jb      = (op == JB);
-assign op_incr    = (op5 == (INCR >> 3));
-assign op_xrla    = (op == XRLA); 
-assign op_subbai  = (op == SUBBAI);
-assign op_movri   = (op5 == (MOVRI >> 3));
-assign op_jc      = (op == JC); 
-assign op_addar   = (op5 == (ADDAR >> 3)); 
-assign op_xrlda   = (op == XRLDA); 
-assign op_movda   = (op == MOVDA);
-assign op_addad   = (op == ADDAD);
-assign op_addai   = (op == ADDAI);
-assign op_deca    = (op == DECA);
-assign op_movdt0  = (op == MOVDT0);
-assign op_movdt1  = (op == MOVDT1);
-assign op_movt1a  = (op == MOVT1A);
-assign op_cjneri  = (op5 == (CJNERI >> 3));
-assign op_clrc    = (op == CLRC); 
-assign op_jnb     = (op == JNB);
-assign op_rlc     = (op == RLC);
-assign op_subbad  = (op == SUBBAD);
-assign op_movrd   = (op5 == (MOVRD >> 3));
-assign op_movdd   = (op == MOVDD);
-assign op_jnc     = (op == JNC);
-assign op_subbar  = (op5 == (SUBBAR >> 3));
-assign op_xrldi   = (op == XRLDI); 
-assign op_jz      = (op == JZ); 
-assign op_mul     = (op == MUL);
-assign op_div     = (op == DIV);
-assign op_cpla    = (op == CPLA);
-assign op_decr    = (op5 == (DECR >> 3));
-assign op_inca    = (op == INCA);
-assign op_setbc   = (op == SETBC);
-assign op_push    = (op == PUSH);
-assign op_pop     = (op == POP);
-assign op_ret     = (op == RET);
-assign op_xchdi   = (op == XCHDI);
-assign op_clrb    = (op == CLRB);
-assign op_cplb    = (op == CPLB);
-assign op_addci   = (op == ADDCI);
-assign op_addcd   = (op == ADDCD);
-assign op_addcr   = (op5 == (ADDCR >> 3));
-assign op_incd    = (op == INCD);
-assign op_cjnead  = (op == CJNEAD);
-assign op_rrc     = (op == RRC);
-assign op_movcb   = (op == MOVCB);
-assign op_rl      = (op == RL);
-assign op_anlai   = (op == ANLAI);
-assign op_orldi   = (op == ORLDI);
-assign op_jnz     = (op == JNZ);
-assign op_xchar   = (op5 == (XCHAR >> 3));
-assign op_djnzr   = (op5 == (DJNZR >> 3));
-assign op_movbc   = (op == MOVBC);
-assign op_setb    = (op == SETB);
-assign op_mova0   = (op == MOVA0);
-assign op_mova1   = (op == MOVA1);
-assign op_swap    = (op == SWAP);
-assign op_orla    = (op == ORLA);
-assign op_cjneai  = (op == CJNEAI);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// DIRECTS
-
-assign d_bb  = (i_code_data == BB);
-assign d_acc = (i_code_data == ACC);
-
+assign o_data_wr   = 
+   (op_movdd & smd2 & (l_data != DPL) & (l_data != DPH) & (l_data != BB)) |
+   (op_lcall & (smd0 | smd1)) |
+   sme & (
+      op_incd |
+      (op_movda & ~d_bb) | 
+      (op_movdi & ~d_bb) | 
+      op_push |
+      op_movt1a |
+      (op_orldi & ~hdph  & ~hdpl & hout) |
+      (op_movd & (i_code_data > 8'h07))
+   );
+assign o_data_addr = 
+   (op_mova0 | op_movdt0               ) ? r[0]:
+   (op_mova1 | op_movdt1 | op_movt1a   ) ? r[1]: 
+   (op_incd & (smd1 | sme)             ) ? h_data: 
+   (  op_movdd & 
+      smd2 & 
+      (l_data != DPL) & 
+      (l_data != DPH) & 
+      (l_data != BB)                            ) ? l_data: 
+   (op_movdi | op_movdd | op_cjnead | op_orldi  ) ? h_data:
+   (op_push | op_lcall                          ) ? sp_inc:
+   (op_ret | op_pop                             ) ? sp:
+                                                   i_code_data; 
+assign o_data_data = 
+   (op_orldi & hout                       ) ? (i_data_data | l_data):
+   (op_movdd & hdph                       ) ? h_dptr:
+   (op_movdd & hdpl                       ) ? l_dptr:
+   (op_incd & sme                         ) ? (i_data_data + 'd1):
+   ((op_movdd | op_push) & (h_data == BB) ) ? b:
+   (op_movdd                              ) ? i_data_data: 
+   (op_push & (h_data == ACC)             ) ? acc:
+   (op_movd | op_push                     ) ? r_sel: 
+   (op_movdi                              ) ? i_code_data:
+   (op_lcall & smd0                       ) ? pc_2[7:0]:
+   (op_lcall & smd1                       ) ? {6'h00, pc_1[9:8]}:
+                                             acc;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // STATE
 
