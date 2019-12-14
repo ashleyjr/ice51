@@ -99,7 +99,10 @@ if [[ "$1" == "$ALL" ]]; then
       ext=".checks"
       cp -f ${filename/\.c/$ext} checks.hex
       iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
-      vvp ice51.dat -vcd | grep "PASSED\|ERROR" 
+      OP=$(time (vvp ice51.dat -vcd)  2>&1)
+      RES=$(echo "$OP" | grep "PASSED\|ERROR")
+      TIME=$(echo "$OP" | grep "real ")
+      echo "$RES ($TIME)"
    done
    echo ">>>>> Simulation ends <<<<<"
    exit
@@ -117,8 +120,11 @@ if [[ "$1" == "$SET" ]]; then
       cp -f ${filename/\.c/$ext} load_mem.hex
       ext=".checks"
       cp -f ${filename/\.c/$ext} checks.hex
-      iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
-      vvp ice51.dat -vcd | grep "PASSED\|ERROR" 
+      iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt 
+      OP=$(time (vvp ice51.dat -vcd)  2>&1)
+      RES=$(echo "$OP" | grep "PASSED\|ERROR")
+      TIME=$(echo "$OP" | grep "real ")
+      echo "$RES ($TIME)"
    done
    echo ">>>>> Simulation ends <<<<<"
    exit
