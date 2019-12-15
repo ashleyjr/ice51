@@ -2,4 +2,5 @@ rtl/ice51_top.v
 rtl/ice51.v
 rtl/mem_512x8b.v
 rtl/mem_1024x8b.v
+rtl/dp_mem_512x8b.v
 verif/tb/ice51_tb.v

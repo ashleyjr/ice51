@@ -1,16 +1,21 @@
 module ice51(
-input    wire        i_clk,
-input    wire        i_nrst,
-input    wire        i_uart_rx,
-output   wire        o_uart_tx,
-output   wire        o_code_wr,
-output   wire  [9:0] o_code_addr,
-output   wire  [7:0] o_code_data,
-input    wire  [7:0] i_code_data,
-output   wire        o_data_wr,
-output   wire  [8:0] o_data_addr,
-output   wire  [7:0] o_data_data,
-input    wire  [7:0] i_data_data
+   input    wire        i_clk,
+   input    wire        i_nrst,
+   input    wire        i_uart_rx,
+   output   wire        o_uart_tx,
+   output   wire        o_code_wr,
+   output   wire  [9:0] o_code_addr,
+   output   wire  [7:0] o_code_data,
+   input    wire  [7:0] i_code_data,
+   output   wire        o_data_wr,
+   output   wire  [8:0] o_data_addr,
+   output   wire  [7:0] o_data_data,
+   input    wire  [7:0] i_data_data,
+   output   wire        o_reg_wr,
+   output   wire  [8:0] o_reg_waddr,
+   output   wire  [7:0] o_reg_wdata,
+   output   wire  [8:0] o_reg_raddr,
+   input    wire  [7:0] i_reg_rdata
 );
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // PARAMETERS
@@ -175,12 +180,7 @@ wire  [9:0]                   pc_1;
 wire  [9:0]                   pc_2;
 
 // REGS
-wire                          r_upd;
-reg   [7:0]                   r[7:0];
 wire  [7:0]                   r_sel;
-wire  [7:0]                   r_next;
-wire  [2:0]                   r_index;
-wire  [2:0]                   r_next_index;
 
 // ACCUMULATOR
 wire  [7:0]                   acc_next;
@@ -487,8 +487,8 @@ assign o_data_wr   =
       (op_movd & (i_code_data > 8'h07))
    );
 assign o_data_addr = 
-   (op_mova0 | op_movdt0               ) ? r[0]:
-   (op_mova1 | op_movdt1 | op_movt1a   ) ? r[1]: 
+   (op_mova0 | op_movdt0 |
+    op_mova1 | op_movdt1 | op_movt1a   ) ? r_sel: 
    (op_incd & (smd1 | sme)             ) ? h_data: 
    (  op_movdd & 
       smd2 & 
@@ -585,7 +585,7 @@ assign pc_jnc     = sme & op_jnc & ~carry;
 assign pc_jnc_bck = pc_jnc & h_data[7];
 assign pc_jnc_fwd = pc_jnc & ~h_data[7];  
 
-assign pc_djnzr_bck = sme & op_djnzr & (r_next != 8'h00) & i_code_data[7];
+assign pc_djnzr_bck = sme & op_djnzr & (o_reg_wdata != 8'h00) & i_code_data[7];
 
 assign pc_cjne     = sme & op_cjneri & (r_sel != h_data);
 assign pc_cjnead   = sme & op_cjnead & ( 
@@ -652,44 +652,41 @@ end
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // REGS
 
-assign r_next = op_xchar                                    ? acc:
-             (op_movrd & (h_data == DPH)               ) ? h_dptr:
-             (op_movrd & (h_data == DPL)               ) ? l_dptr:
-             (op_movrd & (h_data == BB)                ) ? b:
-             (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
-             op_orldi                                    ? (r_sel | l_data):
-             op_xrlda                                    ? (acc ^ r_sel):      
-             op_movri                                    ? h_data:
-             op_incr                                     ? (r_sel + 'd1):
-             (op_decr | op_djnzr)                        ? (r_sel - 'd1):
-             op_movra                                    ? acc: 
-                                                           r_sel;
+assign o_reg_wdata = 
+   op_xchar                                    ? acc:
+   (op_movrd & (h_data == DPH)               ) ? h_dptr:
+   (op_movrd & (h_data == DPL)               ) ? l_dptr:
+   (op_movrd & (h_data == BB)                ) ? b:
+   (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
+   op_orldi                                    ? (r_sel | l_data):
+   op_xrlda                                    ? (acc ^ r_sel):      
+   op_movri                                    ? h_data:
+   op_incr                                     ? (r_sel + 'd1):
+   (op_decr | op_djnzr)                        ? (r_sel - 'd1):
+   op_movra                                    ? acc: 
+                                                 r_sel;
 assign h_reg = (h_data < 8'h08);
 
-assign r_upd  = 
+assign o_reg_wr  = 
    sme & (
       op_movra | op_decr | op_incr | op_movri | op_xrlda  | op_movrd | op_djnzr | op_xchar |
       ((op_movdt0 | op_movdt1 | op_orldi | op_pop) & h_reg) | 
       (op_movd & (i_code_data < 8'h08))
    );
 
-assign r_index =  (op_movdt0 | op_movdt1 | op_xrlda | op_push | op_pop | op_pop | op_orldi) ? h_data[2:0] : op[2:0];
+assign o_reg_raddr[8:3] = 6'h3F;
+assign o_reg_raddr[2:0] =
+   (op_mova0 | op_movdt0                  ) ? 3'b000 :
+   (op_mova1 | op_movdt1 | op_movt1a      ) ? 3'b001:
+   (op_movdt0 | op_movdt1 | op_xrlda | 
+    op_push | op_pop | op_pop | op_orldi  ) ? h_data[2:0] : 
+                                              op[2:0];
 
-assign r_sel  = r[r_index];
+assign o_reg_waddr[8:3] = 6'h3F;
+assign o_reg_waddr[2:0] = 
+   (op_movd) ? i_code_data[2:0] : o_reg_raddr;
 
-assign r_next_index = (op_movd) ? i_code_data[2:0] : r_index;
-
-always@(posedge i_clk or negedge i_nrst) begin
-if(!i_nrst)    {  r[0],
-                  r[1],
-                  r[2],
-                  r[3],
-                  r[4],
-                  r[5],
-                  r[6],
-                  r[7]  }     <= 'd0;
-else if(r_upd)    r[r_next_index]  <= r_next;
-end
+assign r_sel = i_reg_rdata;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

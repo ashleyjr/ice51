@@ -14,6 +14,11 @@ module ice51_top(
    wire  [7:0] data_data_wr;
    wire  [7:0] data_data_rd;
 
+   wire        reg_wr;
+   wire  [8:0] reg_waddr;
+   wire  [7:0] reg_data_wr;
+   wire  [8:0] reg_raddr;
+   wire  [7:0] reg_data_rd;
 
    ice51 ice51(
       .i_clk         (i_clk         ),
@@ -27,7 +32,12 @@ module ice51_top(
       .o_data_wr     (data_wr       ),
       .o_data_addr   (data_addr     ),
       .o_data_data   (data_data_wr  ),
-      .i_data_data   (data_data_rd  )
+      .i_data_data   (data_data_rd  ),
+      .o_reg_wr      (reg_wr        ),
+      .o_reg_waddr   (reg_waddr     ),
+      .o_reg_wdata   (reg_data_wr   ),
+      .o_reg_raddr   (reg_raddr     ),
+      .i_reg_rdata   (reg_data_rd   )
    );
 
    mem_1024x8b code(
@@ -35,8 +45,7 @@ module ice51_top(
       .i_nrst  (i_nrst           ),
       .i_we    (code_wr          ),
       .i_addr  (code_addr        ),
-      .i_wdata (code_data_wr     ),
-      .i_re    (1'b1             ),
+      .i_wdata (code_data_wr     ), 
       .o_rdata (code_data_rd     ) 
    );
 
@@ -45,8 +54,17 @@ module ice51_top(
       .i_nrst  (i_nrst           ),
       .i_we    (data_wr          ),
       .i_addr  (data_addr        ),
-      .i_wdata (data_data_wr     ),
-      .i_re    (1'b1             ),
+      .i_wdata (data_data_wr     ), 
       .o_rdata (data_data_rd     ) 
+   );
+
+   dp_mem_512x8b registers(
+      .i_clk   (i_clk            ),
+      .i_nrst  (i_nrst           ),
+      .i_we    (reg_wr           ),
+      .i_waddr (reg_waddr        ),
+      .i_wdata (reg_data_wr      ), 
+      .i_raddr (reg_raddr        ),
+      .o_rdata (reg_data_rd      ) 
    );
 endmodule

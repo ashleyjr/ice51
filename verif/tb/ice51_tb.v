@@ -50,7 +50,7 @@ module ice51_tb;
        //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
        //for(i=0;i<CHECK_SIZE;i=i+1)   $dumpvars(0,ice51_tb.uart_checks[i]); 
        //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.ice51_top.code.mem[i]); 
-      for(i=0;i<8;i=i+1)               $dumpvars(0,ice51_tb.ice51_top.ice51.r[i]); 
+      for(i=0;i<8;i=i+1)               $dumpvars(0,ice51_tb.ice51_top.registers.mem[i]); 
    end
   	
    task uart_send;

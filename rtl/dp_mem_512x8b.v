@@ -1,31 +1,29 @@
 `timescale 1ns/1ps
-module mem_512x8b (
+module dp_mem_512x8b (
    input    wire        i_nrst,
    input    wire        i_clk,
-   input    wire  [8:0] i_addr,
    input    wire        i_we,
-   input    wire  [7:0] i_wdata,   
+   input    wire  [8:0] i_waddr, 
+   input    wire  [7:0] i_wdata, 
+   input    wire  [8:0] i_raddr, 
    output   wire  [7:0] o_rdata
 );
-    
-
+ 
    `ifdef SIM
       reg [7:0] mem        [511:0];
       reg [8:0] p0_raddr;
-     
+
       assign o_rdata = mem[p0_raddr];
 
       always@(posedge i_clk or negedge i_nrst) begin 
          if(!i_nrst) p0_raddr <= 'd0; 
-         else        p0_raddr <= i_addr;
+         else        p0_raddr <= i_raddr;
       end 
 
       always@(posedge i_clk) begin  
-         if(i_we)    mem[i_addr] <= i_wdata; 
+         if(i_we)    mem[i_waddr] <= i_wdata; 
       end
-
    `else
-      
       wire  [15:0]   s_rdata;
       wire  [15:0]   s_wdata;
 
@@ -59,17 +57,17 @@ module mem_512x8b (
       ) ram (
          .MASK       (16'hxxxx),
          .RDATA      (s_rdata ),
-         .RADDR      (i_addr  ),
+         .RADDR      (i_raddr ),
          .RCLK       (i_clk   ),
          .RCLKE      (1'b1    ),
          .RE         (1'b1    ),
-         .WADDR      (i_addr  ),
+         .WADDR      (i_waddr ),
          .WCLK       (i_clk   ),
          .WCLKE      (1'b1    ),
          .WDATA      (s_wdata ),
          .WE         (i_we    )
       );
+
    `endif
 
 endmodule
-
