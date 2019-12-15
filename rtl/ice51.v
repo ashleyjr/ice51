@@ -186,6 +186,9 @@ wire  [8:0]                   acc_sub_wrap;
 wire  [8:0]                   acc_add_wrap; 
 wire  [7:0]                   acc_add;
 wire  [7:0]                   acc_sub;
+wire  [7:0]                   acc_sub_a;
+wire  [7:0]                   acc_sub_b;
+wire                          acc_sub_c;
 wire  [8:0]                   acc_carry;
 wire  [7:0]                   acc_or;
 wire  [7:0]                   acc_or_a;
@@ -695,14 +698,6 @@ assign o_reg_waddr[2:0] =
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ACCUMULATOR 
 
-assign acc_sub = 
-   (op_subbai                       ) ? h_data:
-   (op_subbar                       ) ? i_reg_rdata:
-   (op_subbad & (i_code_data != BB) ) ? i_data_data: 
-                                        b;
-assign acc_carry        = acc - carry;
-assign acc_sub_wrap     = acc_carry - acc_sub; 
-
 assign acc_add = 
    (op_addci                              ) ? h_data:
    (op_addcd | (op_addad & (h_data == BB))) ? b: 
@@ -720,7 +715,7 @@ assign acc_zero = (acc == 'd0);
 
 assign acc_next = 
    (op_swap | op_xrla                                    ) ? acc_xor:   
-   (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:  
+   (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
    (op_anlai                                             ) ? (acc & i_code_data):
    ((op_xchdi | op_movad) & (h_data == BB)               ) ? b:
    ((op_xchdi | op_movad) & (h_data == DPL)              ) ? l_dptr:
@@ -733,9 +728,9 @@ assign acc_next =
    (op_rl | op_rrc | op_rlc                              ) ? acc_r:   
    (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
    (op_movad & (h_data == SP)                            ) ? sp:
-   (op_movad | op_mova0 | op_mova1                       ) ? i_data_data: 
-   (op_subbad & d_acc                                    ) ? (8'h00 - carry):
-   (op_deca | op_mul                                     ) ? acc - 'd1:
+   (op_movad | op_mova0 | op_mova1                       ) ? i_data_data:  
+   (op_subbad | op_subbai | op_subbar | op_deca | op_mul |                 
+    (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]:
    (op_clra                                              ) ? 'd0:                                 
    ((op_movc | op_movai)                                 ) ? i_code_data:
    (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
@@ -759,6 +754,18 @@ assign acc_r[6:1] =  (op_rrc  ) ? acc[7:2]:
 assign acc_r[0]   =  (op_rl   ) ? acc[7]:
                      (op_rrc  ) ? acc[1]:
                                   carry;
+// ACC.SUB
+assign acc_sub = 
+   (op_subbai                       ) ? h_data:
+   (op_subbar                       ) ? i_reg_rdata:
+   (op_subbad & (i_code_data != BB) ) ? i_data_data: 
+                                        b;
+assign acc_sub_a  = (op_subbad & d_acc) ? 8'h00 : acc;
+assign acc_sub_b  = (op_deca | op_mul ) ? 8'h01 : acc_sub;
+assign acc_sub_c  = (op_deca | op_mul ) ? 1'b0  : carry;
+
+assign acc_sub_wrap = acc_sub_a - acc_sub_b - acc_sub_c; 
+
 
 // ACC.XOR
 assign acc_xor_ctrl = op_swap & smd2;
