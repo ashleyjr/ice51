@@ -212,6 +212,7 @@ reg   [7:0]                   sp;
 wire  [7:0]                   sp_next;
 wire  [7:0]                   sp_inc;
 wire  [7:0]                   sp_dec;
+wire  [7:0]                   sp_inc_dec;
 wire                          sp_upd;
 
 // F
@@ -859,17 +860,24 @@ end
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Stack pointer
 
-assign sp_inc  = sp + 1;
-assign sp_dec  = sp - 1;
+assign hsp        = (h_data == SP);
+assign sp_inc     = sp + 'd1;
+assign sp_dec     = sp - 'd1;
+assign sp_inc_dec = (op_lcall | op_push) ? sp_inc : sp_dec;
+
 assign sp_next = 
-   (sme & op_movda & (h_data == SP))              ? acc:
-   ((sme & op_push) | (op_lcall & (smd0 | smd1))) ? sp_inc : 
-   ((sme & op_pop)  | ((smd0 | smd1) & op_ret)  ) ? sp_dec :
-   (sme & op_movdi & (h_data == SP))              ? i_code_data:
-                                                    sp;                             
+   (op_movda) ? acc:
+   (op_movdi) ? i_code_data:
+                sp_inc_dec;                            
+
+assign sp_upd = (
+   (smd0 | smd1)  & (op_ret | op_lcall) |
+   sme            & (((op_movda | op_movdi) & hsp) | op_push | op_pop)
+);
+
 always@(posedge i_clk or negedge i_nrst) begin
-   if(!i_nrst) sp <= 8'h07;
-   else        sp <= sp_next;
+   if(!i_nrst)       sp <= 8'h07;
+   else if(sp_upd)   sp <= sp_next;
 end
 
 
