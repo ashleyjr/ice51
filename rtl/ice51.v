@@ -472,13 +472,14 @@ assign hdpl = (h_data == DPL);
 assign hdph = (h_data == DPH);
 assign hout = (h_data > 8'h07);
 
+assign nl =  (l_data != DPL) & (l_data != DPH) & (l_data != BB);
+
 assign o_data_wr   = 
-   (op_movdd & smd2 & (l_data != DPL) & (l_data != DPH) & (l_data != BB)) |
+   (op_movdd & smd2 & nl) |
    (op_lcall & (smd0 | smd1)) |
    sme & (
       op_incd |
-      (op_movda & ~d_bb) | 
-      (op_movdi & ~d_bb) | 
+      ((op_movda | op_movdi) & ~d_bb) |  
       op_push |
       op_movt1a |
       (op_orldi & ~hdph  & ~hdpl & hout) |
@@ -486,13 +487,9 @@ assign o_data_wr   =
    );
 assign o_data_addr = 
    (op_mova0 | op_movdt0 |
-    op_mova1 | op_movdt1 | op_movt1a   ) ? i_reg_rdata: 
-   (op_incd & (smd1 | sme)             ) ? h_data: 
-   (  op_movdd & 
-      smd2 & 
-      (l_data != DPL) & 
-      (l_data != DPH) & 
-      (l_data != BB)                            ) ? l_data: 
+    op_mova1 | op_movdt1 | op_movt1a            ) ? i_reg_rdata: 
+   (op_incd & (smd1 | sme)                      ) ? h_data: 
+   (  op_movdd & smd2 & nl                      ) ? l_data: 
    (op_movdi | op_movdd | op_cjnead | op_orldi  ) ? h_data:
    (op_push | op_lcall                          ) ? sp_inc:
    (op_ret | op_pop                             ) ? sp:
