@@ -179,9 +179,6 @@ wire  [6:0]                   pc_add;
 wire  [9:0]                   pc_1;
 wire  [9:0]                   pc_2;
 
-// REGS
-wire  [7:0]                   r_sel;
-
 // ACCUMULATOR
 wire  [7:0]                   acc_next;
 reg   [7:0]                   acc; 
@@ -488,7 +485,7 @@ assign o_data_wr   =
    );
 assign o_data_addr = 
    (op_mova0 | op_movdt0 |
-    op_mova1 | op_movdt1 | op_movt1a   ) ? r_sel: 
+    op_mova1 | op_movdt1 | op_movt1a   ) ? i_reg_rdata: 
    (op_incd & (smd1 | sme)             ) ? h_data: 
    (  op_movdd & 
       smd2 & 
@@ -507,7 +504,7 @@ assign o_data_data =
    ((op_movdd | op_push) & (h_data == BB) ) ? b:
    (op_movdd                              ) ? i_data_data: 
    (op_push & (h_data == ACC)             ) ? acc:
-   (op_movd | op_push                     ) ? r_sel: 
+   (op_movd | op_push                     ) ? i_reg_rdata: 
    (op_movdi                              ) ? i_code_data:
    (op_lcall & smd0                       ) ? pc_2[7:0]:
    (op_lcall & smd1                       ) ? {6'h00, pc_1[9:8]}:
@@ -587,12 +584,12 @@ assign pc_jnc_fwd = pc_jnc & ~h_data[7];
 
 assign pc_djnzr_bck = sme & op_djnzr & (o_reg_wdata != 8'h00) & i_code_data[7];
 
-assign pc_cjne     = sme & op_cjneri & (r_sel != h_data);
+assign pc_cjne     = sme & op_cjneri & (i_reg_rdata != h_data);
 assign pc_cjnead   = sme & op_cjnead & ( 
                     ((h_data == DPL) & (l_dptr != acc)) |
                     ((h_data == DPH) & (h_dptr != acc)) |
                     ((h_data > 8'h07) & (i_data_data != acc)) |
-                    ((h_data < 8'h08) & (r_sel != acc)));
+                    ((h_data < 8'h08) & (i_reg_rdata != acc)));
 
 assign pc_cjneai   = sme & op_cjneai & (h_data != acc);
 assign pc_cj       = (pc_cjne | pc_cjnead | pc_cjneai);
@@ -658,13 +655,13 @@ assign o_reg_wdata =
    (op_movrd & (h_data == DPL)               ) ? l_dptr:
    (op_movrd & (h_data == BB)                ) ? b:
    (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
-   op_orldi                                    ? (r_sel | l_data):
-   op_xrlda                                    ? (acc ^ r_sel):      
+   op_orldi                                    ? (i_reg_rdata | l_data):
+   op_xrlda                                    ? (acc ^ i_reg_rdata):      
    op_movri                                    ? h_data:
-   op_incr                                     ? (r_sel + 'd1):
-   (op_decr | op_djnzr)                        ? (r_sel - 'd1):
+   op_incr                                     ? (i_reg_rdata + 'd1):
+   (op_decr | op_djnzr)                        ? (i_reg_rdata - 'd1):
    op_movra                                    ? acc: 
-                                                 r_sel;
+                                                 i_reg_rdata;
 assign h_reg = (h_data < 8'h08);
 
 assign o_reg_wr  = 
@@ -686,15 +683,12 @@ assign o_reg_waddr[8:3] = 6'h3F;
 assign o_reg_waddr[2:0] = 
    (op_movd) ? i_code_data[2:0] : o_reg_raddr;
 
-assign r_sel = i_reg_rdata;
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ACCUMULATOR 
 
 
 assign acc_sub = (op_subbai) ? h_data:
-              (op_subbar) ? r_sel:
+              (op_subbar) ? i_reg_rdata:
               (op_subbad & (i_code_data != BB)) ? i_data_data: 
                             b;
 
@@ -709,7 +703,7 @@ assign acc_add = (op_addci) ? h_data:
               (op_addad & (h_data == DPL)) ? l_dptr:
               (op_addad & (h_data == BB)) ? b:
               (op_addad) ? i_data_data :
-              (op_addar | op_addcr) ? r_sel:
+              (op_addar | op_addcr) ? i_reg_rdata:
                            {7'h00, op_inca}; 
 
 assign acc_add_wrap = acc + acc_add + (carry & (op_addci | op_addcd | op_addcr));
@@ -726,7 +720,7 @@ assign acc_next = (op_orla                                  ) ? (acc | i_code_da
                   (op_xchdi & (h_data == BB)                ) ? b:
                   (op_xchdi & (h_data == DPL)               ) ? l_dptr:
                   (op_xchdi & (h_data == DPH)               ) ? h_dptr:
-                  (op_xchar                                 ) ? r_sel:
+                  (op_xchar                                 ) ? i_reg_rdata:
                   (op_cpla                                  ) ? ~acc:
                   (op_mul & mul_done                        ) ? mul_ab[7:0]:
                   (op_div & div_done                        ) ? div_q:
@@ -742,7 +736,7 @@ assign acc_next = (op_orla                                  ) ? (acc | i_code_da
                   (op_movad | op_mova0 | op_mova1           ) ? i_data_data:
                   (op_xrla                                  ) ? (acc ^ h_data): 
                   (op_subbad & d_acc                        ) ? (8'h00 - carry):
-                  (op_movar                                 ) ? r_sel: 
+                  (op_movar                                 ) ? i_reg_rdata: 
                   (op_deca | op_mul                         ) ? acc - 'd1:
                   (op_clra                                  ) ? 'd0:                                 
                   ((op_movc | op_movai)                     ) ? i_code_data:
@@ -767,7 +761,7 @@ assign l_dptr_next = (op_incd ) ? (l_dptr - 'd1):
                      (op_movdi) ? i_code_data:
                      (op_xchdi) ? acc:
                      (op_movda & l_dptr_code) ? acc:
-                     l_dptr_code ? r_sel:
+                     l_dptr_code ? i_reg_rdata:
                      l_dptr_data ? i_data_data:
                                    l_data; 
 assign l_dptr_upd  = sme & (
@@ -788,7 +782,7 @@ assign h_dptr_next = (op_incd ) ? (l_dptr - 'd1):
                      (op_movdi) ? i_code_data:
                      (op_xchdi) ? acc:
                      (op_movda & h_dptr_code) ? acc:
-                     h_dptr_code ? r_sel:
+                     h_dptr_code ? i_reg_rdata:
                      h_dptr_data ? i_data_data:
                                    h_data;
 assign h_dptr_upd  = sme & (
@@ -826,8 +820,8 @@ assign carry_next = (op_subbad & carry & d_acc) |
                     (op_cjnead & (h_data == DPH) & (acc < h_dptr)) |
                     (op_cjnead & (h_data == DPL) & (acc < l_dptr)) |
                     (op_cjneai & (acc < h_data)) |
-                    (op_cjnead & (acc < r_sel)) |
-                    (op_cjneri & (r_sel < h_data)) |
+                    (op_cjnead & (acc < i_reg_rdata)) |
+                    (op_cjneri & (i_reg_rdata < h_data)) |
                     op_setbc;
 
 assign carry_upd  = sme & (op_movcb | op_clrc | op_cjneri | op_cjneai | op_cjnead | op_addad |  op_subbai | op_subbar | op_rlc | op_rrc | op_subbad | op_addai | op_inca | op_setbc | op_addar | op_addcr); 
@@ -853,7 +847,7 @@ assign b_next        = (op_setb   & b_h_sel_low ) ? b | (1'b1 << h_data[2:0]):
                        (op_mul    & mul_done    ) ? mul_ab[15:8]:
                        (op_movda  & d_bb        ) ? acc:
                        (op_movdi  & b_h_sel     ) ? i_code_data:
-                       (op_movd   & d_bb        ) ? r_sel:
+                       (op_movd   & d_bb        ) ? i_reg_rdata:
                        (op_xrldi  & b_h_sel     ) ? b ^ l_data:
                                                     b;
 
