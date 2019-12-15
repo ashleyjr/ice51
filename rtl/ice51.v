@@ -532,13 +532,14 @@ assign smd1 = (state == SM_DECODE1);
 assign smd2 = (state == SM_DECODE2);
 assign sme  = (state == SM_EXECUTE);  
 
-assign state_next = (smf  & uart_load_done   ) ? SM_DECODE0:  
-                    (smd0 & (d3 | d1)        ) ? SM_DECODE1:  
-                    (smd0                    ) ? SM_EXECUTE:  
-                    (smd1 & d3               ) ? SM_DECODE2:  
-                    (smd1 | smd2             ) ? SM_EXECUTE: 
-                    (sme & sme_extend_done   ) ? SM_FETCH: 
-                                                 state;
+assign state_next = 
+   (smf  & uart_load_done   ) ? SM_DECODE0:  
+   (smd0 & (d3 | d1)        ) ? SM_DECODE1:  
+   (smd0                    ) ? SM_EXECUTE:  
+   (smd1 & d3               ) ? SM_DECODE2:  
+   (smd1 | smd2             ) ? SM_EXECUTE: 
+   (sme & sme_extend_done   ) ? SM_FETCH: 
+                                state;
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) state  <= 'd0;
@@ -626,20 +627,21 @@ assign pc_add_l_data    = pc_jnb     | pc_jb_fwd  | pc_cjne_fwd;
 assign pc_add_h_data    = pc_jnc_fwd | pc_jc_fwd; 
 assign pc_add_code_data = pc_jz_fwd  | pc_jnz_fwd | pc_fwd;
 
-assign pc_add  =  (pc_add_l_data    ) ? l_data[6:0]:
-                  (pc_add_h_data    ) ? h_data[6:0] :  
-                  (pc_add_code_data ) ? i_code_data[6:0]:
-                                       'd1;
+assign pc_add  =  
+   (pc_add_l_data    ) ? l_data[6:0]:
+   (pc_add_h_data    ) ? h_data[6:0] :  
+   (pc_add_code_data ) ? i_code_data[6:0]:
+                        'd1;
 
-assign pc_next =  (pc_ret_top                                                 ) ? {i_data_data, pc[7:0]}: 
-                  (pc_ret_bot                                                 ) ? {pc[15:8], i_data_data}: 
-                  (pc_bck                                                     ) ? pc - pc_twos - 'd1: 
-                  (pc_replace                                                 ) ? {h_data,l_data}:
-                  (pc_jb_bck | pc_cjne_bck                                    ) ? pc_bck_l_data:
-                  (pc_jc_bck | pc_jnc_bck                                     ) ? pc_bck_h_data: 
-                  (pc_jnz_bck | pc_jz_bck | pc_djnzr_bck                      ) ? pc - pc_twos - 'd1:
-                  (pc_add_l_data | pc_add_h_data | pc_add_code_data | pc_inc  ) ? pc + pc_add:  
-                                                                                  pc;
+assign pc_next =  
+   (pc_ret_top                                                 ) ? {i_data_data, pc[7:0]}: 
+   (pc_ret_bot                                                 ) ? {pc[15:8], i_data_data}: 
+   (pc_bck | pc_jnz_bck | pc_jz_bck | pc_djnzr_bck             ) ? pc - pc_twos - 'd1: 
+   (pc_replace                                                 ) ? {h_data,l_data}:
+   (pc_jb_bck | pc_cjne_bck                                    ) ? pc_bck_l_data:
+   (pc_jc_bck | pc_jnc_bck                                     ) ? pc_bck_h_data:  
+   (pc_add_l_data | pc_add_h_data | pc_add_code_data | pc_inc  ) ? pc + pc_add:  
+                                                                   pc;
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst)    pc  <= 'd0;
@@ -859,12 +861,12 @@ end
 
 assign sp_inc  = sp + 1;
 assign sp_dec  = sp - 1;
-assign sp_next = (sme & op_movda & (h_data == SP))              ? acc:
-                 ((sme & op_push) | (op_lcall & (smd0 | smd1))) ? sp_inc : 
-                 ((sme & op_pop)  | ((smd0 | smd1) & op_ret)  ) ? sp_dec :
-                 (sme & op_movdi & (h_data == SP))              ? i_code_data:
-                                                                  sp;
-                             
+assign sp_next = 
+   (sme & op_movda & (h_data == SP))              ? acc:
+   ((sme & op_push) | (op_lcall & (smd0 | smd1))) ? sp_inc : 
+   ((sme & op_pop)  | ((smd0 | smd1) & op_ret)  ) ? sp_dec :
+   (sme & op_movdi & (h_data == SP))              ? i_code_data:
+                                                    sp;                             
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) sp <= 8'h07;
    else        sp <= sp_next;
