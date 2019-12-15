@@ -187,6 +187,9 @@ wire  [8:0]                   acc_add_wrap;
 wire  [7:0]                   acc_add;
 wire  [7:0]                   acc_sub;
 wire  [8:0]                   acc_carry;
+wire  [7:0]                   acc_or;
+wire  [7:0]                   acc_or_a;
+wire  [7:0]                   acc_or_b;
 wire  [7:0]                   acc_xor;
 wire  [7:0]                   acc_xor_a;
 wire  [7:0]                   acc_xor_b;
@@ -715,30 +718,37 @@ assign acc_add_wrap = acc + acc_add + (carry & (op_addci | op_addcd | op_addcr))
 assign acc_zero = (acc == 'd0);
 
 assign acc_next = 
-   (op_orla                                  ) ? (acc | i_code_data): 
-   (op_swap | op_xrla                        ) ? acc_xor:  
-   (op_setb & (h_data[7:3] == (BIT_ACC >> 3))) ? (acc | (1'b1 << h_data[2:0])):
-   (op_anlai                                 ) ? (acc & i_code_data):
-   ((op_xchdi | op_movad) & (h_data == BB)   ) ? b:
-   ((op_xchdi | op_movad) & (h_data == DPL)  ) ? l_dptr:
-   ((op_xchdi | op_movad) & (h_data == DPH)  ) ? h_dptr:
-   (op_xchar | op_movar                      ) ? i_reg_rdata:
-   (op_cpla                                  ) ? ~acc:
-   (op_mul & mul_done                        ) ? mul_ab[7:0]:
-   (op_div & div_done                        ) ? div_q:
-   (op_subbad | op_subbai | op_subbar        ) ? acc_sub_wrap[7:0]:
-   (op_rl                                    ) ? {acc[6:0], acc[7]}:
-   (op_rrc                                   ) ? {carry,    acc[7:1]}: 
-   (op_rlc                                   ) ? {acc[6:0], carry}:  
-   (op_movad & (h_data == PSW)               ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
-   (op_movad & (h_data == SP)                ) ? sp:
-   (op_movad | op_mova0 | op_mova1           ) ? i_data_data: 
-   (op_subbad & d_acc                        ) ? (8'h00 - carry):
-   (op_deca | op_mul                         ) ? acc - 'd1:
-   (op_clra                                  ) ? 'd0:                                 
-   ((op_movc | op_movai)                     ) ? i_code_data:
-   (op_movxad & (dptr == 16'h200)            ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
-                                                 acc_add_wrap[7:0];
+   (op_swap | op_xrla                                    ) ? acc_xor:   
+   (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:  
+   (op_anlai                                             ) ? (acc & i_code_data):
+   ((op_xchdi | op_movad) & (h_data == BB)               ) ? b:
+   ((op_xchdi | op_movad) & (h_data == DPL)              ) ? l_dptr:
+   ((op_xchdi | op_movad) & (h_data == DPH)              ) ? h_dptr:
+   (op_xchar | op_movar                                  ) ? i_reg_rdata:
+   (op_cpla                                              ) ? ~acc:
+   (op_mul & mul_done                                    ) ? mul_ab[7:0]:
+   (op_div & div_done                                    ) ? div_q:
+   (op_subbad | op_subbai | op_subbar                    ) ? acc_sub_wrap[7:0]:
+   (op_rl                                                ) ? {acc[6:0], acc[7]}:
+   (op_rrc                                               ) ? {carry,    acc[7:1]}: 
+   (op_rlc                                               ) ? {acc[6:0], carry}:  
+   (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
+   (op_movad & (h_data == SP)                            ) ? sp:
+   (op_movad | op_mova0 | op_mova1                       ) ? i_data_data: 
+   (op_subbad & d_acc                                    ) ? (8'h00 - carry):
+   (op_deca | op_mul                                     ) ? acc - 'd1:
+   (op_clra                                              ) ? 'd0:                                 
+   ((op_movc | op_movai)                                 ) ? i_code_data:
+   (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
+                                                             acc_add_wrap[7:0];
+
+// ACC.OR
+assign acc_or_a = acc;
+
+assign acc_or_b = (op_orla) ? i_code_data:
+                              (1'b1 << h_data[2:0]);
+                           
+assign acc_or   = acc_or_a | acc_or_b;
 
 
 // ACC.XOR
