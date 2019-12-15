@@ -190,6 +190,7 @@ wire  [8:0]                   acc_carry;
 wire  [7:0]                   acc_or;
 wire  [7:0]                   acc_or_a;
 wire  [7:0]                   acc_or_b;
+wire  [7:0]                   acc_r;
 wire  [7:0]                   acc_xor;
 wire  [7:0]                   acc_xor_a;
 wire  [7:0]                   acc_xor_b;
@@ -729,9 +730,7 @@ assign acc_next =
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
    (op_div & div_done                                    ) ? div_q:
    (op_subbad | op_subbai | op_subbar                    ) ? acc_sub_wrap[7:0]:
-   (op_rl                                                ) ? {acc[6:0], acc[7]}:
-   (op_rrc                                               ) ? {carry,    acc[7:1]}: 
-   (op_rlc                                               ) ? {acc[6:0], carry}:  
+   (op_rl | op_rrc | op_rlc                              ) ? acc_r:   
    (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
    (op_movad & (h_data == SP)                            ) ? sp:
    (op_movad | op_mova0 | op_mova1                       ) ? i_data_data: 
@@ -750,6 +749,16 @@ assign acc_or_b = (op_orla) ? i_code_data:
                            
 assign acc_or   = acc_or_a | acc_or_b;
 
+
+// ACC.R?
+
+assign acc_r[7]   =  (op_rrc  ) ? carry:
+                                  acc[6];
+assign acc_r[6:1] =  (op_rrc  ) ? acc[7:2]:
+                                  acc[5:0];
+assign acc_r[0]   =  (op_rl   ) ? acc[7]:
+                     (op_rrc  ) ? acc[1]:
+                                  carry;
 
 // ACC.XOR
 assign acc_xor_ctrl = op_swap & smd2;
