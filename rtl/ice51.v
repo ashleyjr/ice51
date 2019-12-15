@@ -584,11 +584,14 @@ assign pc_jnc_fwd = pc_jnc & ~h_data[7];
 assign pc_djnzr_bck = sme & op_djnzr & (o_reg_wdata != 8'h00) & i_code_data[7];
 
 assign pc_cjne     = sme & op_cjneri & (i_reg_rdata != h_data);
-assign pc_cjnead   = sme & op_cjnead & ( 
-                    ((h_data == DPL) & (l_dptr != acc)) |
-                    ((h_data == DPH) & (h_dptr != acc)) |
-                    ((h_data > 8'h07) & (i_data_data != acc)) |
-                    ((h_data < 8'h08) & (i_reg_rdata != acc)));
+assign pc_cjnead   = 
+   sme & op_cjnead & ( 
+   ((h_data == DPL) & (l_dptr != acc)) |
+   ((h_data == DPH) & (h_dptr != acc)) |
+   (  (h_data > 8'h07) ?   (i_data_data != acc) : 
+                           (i_reg_rdata != acc)
+   )
+);
 
 assign pc_cjneai   = sme & op_cjneai & (h_data != acc);
 assign pc_cj       = (pc_cjne | pc_cjnead | pc_cjneai);
