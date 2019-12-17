@@ -724,7 +724,7 @@ assign acc_next =
    (op_cpla                                              ) ? ~acc:
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
    (op_div & div_done                                    ) ? div_q:
-   (op_subbad | op_subbai | op_subbar                    ) ? acc_sub_wrap[7:0]:
+   //(op_subbad | op_subbai | op_subbar                    ) ? acc_sub_wrap[7:0]:
    (op_rl | op_rrc | op_rlc                              ) ? acc_r:   
    (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
    (op_movad & (h_data == SP)                            ) ? sp:
