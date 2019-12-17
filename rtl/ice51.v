@@ -173,10 +173,8 @@ wire  [9:0]                   pc_next;
 wire  [6:0]                   pc_twos;  
 wire  [6:0]                   pc_n_l_data7;
 wire  [6:0]                   pc_n_h_data7;
-wire  [8:0]                   pc_bck_l_data;
-wire  [8:0]                   pc_bck_h_data;
 wire  [6:0]                   pc_add;
-wire  [9:0]                   pc_1;
+wire  [6:0]                   pc_sub;
 wire  [9:0]                   pc_2;
 
 // ACCUMULATOR
@@ -514,7 +512,7 @@ assign o_data_data =
    (op_movd | op_push                     ) ? i_reg_rdata: 
    (op_movdi                              ) ? i_code_data:
    (op_lcall & smd0                       ) ? pc_2[7:0]:
-   (op_lcall & smd1                       ) ? {6'h00, pc_1[9:8]}:
+   (op_lcall & smd1                       ) ? {6'h00, pc_next[9:8]}:
                                              acc;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // STATE
@@ -561,9 +559,6 @@ assign n_code_data   = ~i_code_data;
 assign pc_n_l_data7  = ~l_data[6:0];
 assign pc_n_h_data7  = ~h_data[6:0];
 assign pc_twos       = n_code_data[6:0];
-
-assign pc_bck_l_data = pc - pc_n_l_data7 - 'd1;
-assign pc_bck_h_data = pc - pc_n_h_data7 - 'd1;
 
 assign pc_sjmp    = sme & op_sjmp;
 assign pc_bck     = pc_sjmp & i_code_data[7];
@@ -617,8 +612,7 @@ assign pc_jnz_bck = pc_jnz & i_code_data[7];
 assign pc_ret_top = smd1 & op_ret;
 assign pc_ret_bot = smd2 & op_ret;
 
-assign pc_1 = pc + 'd1;
-assign pc_2 = pc + 'd2;
+assign pc_2 = pc_next + 'd1;
 
 assign pc_inc = 
       (smf & uart_load_done)   |
@@ -643,13 +637,17 @@ assign pc_add  =
    (pc_add_code_data ) ? i_code_data[6:0]:
                         'd1;
 
+assign pc_sub  =  
+   (pc_jb_bck | pc_cjne_bck ) ? pc_n_l_data7:
+   (pc_jc_bck | pc_jnc_bck  ) ? pc_n_h_data7:
+                                pc_twos; 
+                     
 assign pc_next =  
    (pc_ret_top                                                 ) ? {i_data_data, pc[7:0]}: 
-   (pc_ret_bot                                                 ) ? {pc[15:8], i_data_data}: 
-   (pc_bck | pc_jnz_bck | pc_jz_bck | pc_djnzr_bck             ) ? pc - pc_twos - 'd1: 
+   (pc_ret_bot                                                 ) ? {pc[15:8], i_data_data}:  
    (pc_replace                                                 ) ? {h_data,l_data}:
-   (pc_jb_bck | pc_cjne_bck                                    ) ? pc_bck_l_data:
-   (pc_jc_bck | pc_jnc_bck                                     ) ? pc_bck_h_data:  
+   (pc_bck | pc_jnz_bck | pc_jz_bck | pc_djnzr_bck |  
+    pc_jb_bck | pc_cjne_bck | pc_jc_bck | pc_jnc_bck           ) ? pc - pc_sub - 'd1:  
    (pc_add_l_data | pc_add_h_data | pc_add_code_data | pc_inc  ) ? pc + pc_add:  
                                                                    pc;
 
