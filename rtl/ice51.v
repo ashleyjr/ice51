@@ -406,27 +406,31 @@ assign uart_tx_next  = (uart_tx_start) ? o_data_data:
                        (uart_tx_shift) ? {uart_tx[6:0],1'b1}:
                                          uart_tx;
 
+assign uart_tx_state_idle  = (uart_tx_state == SM_UART_TX_IDLE);
+assign uart_tx_state_start = (uart_tx_state == SM_UART_TX_START);
+assign uart_tx_state_send  = (uart_tx_state == SM_UART_TX_SEND); 
+
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_tx  <= 'd0;
    else        uart_tx  <= uart_tx_next;
 end
 
-assign uart_tx_state_next = ((uart_tx_state == SM_UART_TX_IDLE ) & uart_tx_start  ) ? SM_UART_TX_START:
-                            ((uart_tx_state == SM_UART_TX_START) & uart_tx_sample ) ? SM_UART_TX_SEND:
-                            ((uart_tx_state == SM_UART_TX_SEND)  & uart_tx_finish ) ? SM_UART_TX_IDLE:
-                                                                                      uart_tx_state;
+assign uart_tx_state_next = (uart_tx_state_idle  & uart_tx_start  ) ? SM_UART_TX_START:
+                            (uart_tx_state_start & uart_tx_sample ) ? SM_UART_TX_SEND:
+                            (uart_tx_state_send  & uart_tx_finish ) ? SM_UART_TX_IDLE:
+                                                                      uart_tx_state;
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_tx_state  <= 'd0;
    else        uart_tx_state  <= uart_tx_state_next;
 end
 
-assign o_uart_tx = (uart_tx_state == SM_UART_TX_IDLE ) ? 1'b1:
-                   (uart_tx_state == SM_UART_TX_START) ? 1'b0:
-                                                         uart_tx[7];
+assign o_uart_tx = (uart_tx_state_idle ) ? 1'b1:
+                   (uart_tx_state_start) ? 1'b0:
+                                           uart_tx[7];
 
 assign uart_tx_sample = (SAMPLE == uart_tx_sample_count); 
 
-assign uart_tx_sample_count_next = ((uart_tx_state == SM_UART_TX_IDLE) | uart_tx_sample) ? 'd0: (uart_tx_sample_count + 'd1);
+assign uart_tx_sample_count_next = ((uart_tx_state_idle) | uart_tx_sample) ? 'd0: (uart_tx_sample_count + 'd1);
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_tx_sample_count  <= 'd0;
