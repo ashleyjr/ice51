@@ -577,8 +577,8 @@ assign pc_jb_fwd  = pc_jb & ~l_data[7];
 assign pc_jnb = 
    sme & op_jnb & (
       (~acc[h_data[2:0]] & (h_data[7:3] == (BIT_ACC >> 3))) |
-      ((f == 1'b0) & (h_data == BIT_F0)) | 
-      ((f1 == 1'b0) & (h_data == BIT_F1)) 
+      (~f & (h_data == BIT_F0)) | 
+      (~f1 & (h_data == BIT_F1)) 
    );
 
 assign pc_jc      = sme & op_jc & carry;
@@ -725,8 +725,7 @@ assign acc_next =
    (op_xchar | op_movar                                  ) ? i_reg_rdata:
    (op_cpla                                              ) ? ~acc:
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
-   (op_div & div_done                                    ) ? div_q:
-   //(op_subbad | op_subbai | op_subbar                    ) ? acc_sub_wrap[7:0]:
+   (op_div & div_done                                    ) ? div_q: 
    (op_rl | op_rrc | op_rlc                              ) ? acc_r:   
    (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
    (op_movad & (h_data == SP)                            ) ? sp:
