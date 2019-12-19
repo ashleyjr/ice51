@@ -759,8 +759,8 @@ assign acc_sub =
    (op_subbad & (i_code_data != BB) ) ? i_data_data: 
                                         b;
 assign acc_sub_a  = (op_subbad & d_acc) ? 8'h00 : acc;
-assign acc_sub_b  = (op_deca | op_mul ) ? 8'h01 : acc_sub;
-assign acc_sub_c  = (op_deca | op_mul ) ? 1'b0  : carry;
+assign acc_sub_b  = (op_deca | op_mul ) ? 8'h00 : acc_sub;
+assign acc_sub_c  =  op_deca | op_mul | carry;
 
 assign acc_sub_wrap = acc_sub_a - acc_sub_b - acc_sub_c; 
 
