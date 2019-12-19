@@ -235,8 +235,6 @@ reg   [8:0]                   div_r;
 wire  [8:0]                   div_r_next;
 reg   [7:0]                   div_q; 
 wire  [7:0]                   div_q_next; 
-reg   [7:0]                   div_n; 
-wire  [7:0]                   div_n_next;
 reg   [7:0]                   div_d; 
 wire  [7:0]                   div_d_next;
 wire  [7:0]                   div_sub;
@@ -726,7 +724,7 @@ assign acc_next =
    (op_cpla                                              ) ? ~acc:
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
    (op_div & div_done                                    ) ? div_q: 
-   (op_rl | op_rrc | op_rlc                              ) ? acc_r:   
+   (op_rl | op_rrc | op_rlc | op_div                     ) ? acc_r:   
    (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
    (op_movad & (h_data == SP)                            ) ? sp:
    (op_movad | op_mova0 | op_mova1                       ) ? i_data_data:  
@@ -752,7 +750,8 @@ assign acc_r[7]   =  (op_rrc  ) ? carry:
                                   acc[6];
 assign acc_r[6:1] =  (op_rrc  ) ? acc[7:2]:
                                   acc[5:0];
-assign acc_r[0]   =  (op_rl   ) ? acc[7]:
+assign acc_r[0]   =  (op_div  ) ? 1'b0:
+                     (op_rl   ) ? acc[7]:
                      (op_rrc  ) ? acc[1]:
                                   carry;
 // ACC.SUB
@@ -782,7 +781,7 @@ assign acc_xor_b = (op_xrla       ) ?  h_data:
 assign acc_xor   = acc_xor_a ^ acc_xor_b;
 
 
-assign acc_upd = sme | (op_swap & (smd1 | smd2));
+assign acc_upd = sme | (op_swap & (smd1 | smd2)) | (op_div & smd0 & ~div_start);
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst)       acc <= 'd0;
@@ -965,13 +964,11 @@ end
 
 assign div_start  = op_div & smd0;
 assign div_go     = op_div & sme & ~div_done;
-assign div_shift  = {div_r[7:0],div_n[7]}; 
+assign div_shift  = {div_r[7:0],acc[7]}; 
 assign div_comp   = (div_shift >= div_d);
 assign div_stop   = (div_i == 'd0);
 
 assign div_sub    = (div_comp ) ? div_d : 'd0;
-
-assign div_n_next = (div_start) ? acc : (div_n << 1);
 
 assign div_i_next = (div_go  & ~div_stop ) ? div_i - 'd1:
                     (div_done            ) ? 3'h7:
@@ -986,11 +983,6 @@ assign div_q_next = (div_go) ? {div_q[6:0], div_comp}:
 
 assign div_d_next = (div_start) ? b:
                                   div_d;
-
-always@(posedge i_clk or negedge i_nrst) begin
-	if(!i_nrst)    div_n <= 'd0;
-   else           div_n <= div_n_next;
-end
 
 always@(posedge i_clk or negedge i_nrst) begin
 	if(!i_nrst)    div_d <= 'd0;
