@@ -235,8 +235,6 @@ reg   [8:0]                   div_r;
 wire  [8:0]                   div_r_next;
 reg   [7:0]                   div_q; 
 wire  [7:0]                   div_q_next; 
-reg   [7:0]                   div_d; 
-wire  [7:0]                   div_d_next;
 wire  [7:0]                   div_sub;
 reg                           div_done;
 
@@ -965,10 +963,10 @@ end
 assign div_start  = op_div & smd0;
 assign div_go     = op_div & sme & ~div_done;
 assign div_shift  = {div_r[7:0],acc[7]}; 
-assign div_comp   = (div_shift >= div_d);
+assign div_comp   = (div_shift >= b_next);
 assign div_stop   = (div_i == 'd0);
 
-assign div_sub    = (div_comp ) ? div_d : 'd0;
+assign div_sub    = (div_comp ) ? b_next : 'd0;
 
 assign div_i_next = (div_go  & ~div_stop ) ? div_i - 'd1:
                     (div_done            ) ? 3'h7:
@@ -980,14 +978,6 @@ assign div_r_next = (div_go  ) ? div_shift - div_sub:
 
 assign div_q_next = (div_go) ? {div_q[6:0], div_comp}:
                                8'h00;  
-
-assign div_d_next = (div_start) ? b:
-                                  div_d;
-
-always@(posedge i_clk or negedge i_nrst) begin
-	if(!i_nrst)    div_d <= 'd0;
-   else           div_d <= div_d_next;
-end
 
 always@(posedge i_clk or negedge i_nrst) begin
 	if(!i_nrst)    div_q <= 'd0;
