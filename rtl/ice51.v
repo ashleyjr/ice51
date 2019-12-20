@@ -817,8 +817,7 @@ assign l_dptr_upd  =
 assign h_dptr_code =  (i_code_data == DPH);
 assign h_dptr_data =  (l_data== DPH);
 
-assign h_dptr_next = 
-   (op_incd                ) ? (l_dptr - 'd1):
+assign h_dptr_next =  
    (op_orldi               ) ? (h_dptr | l_data): 
    (op_movdi               ) ? i_code_data:
    (op_xchdi |              
