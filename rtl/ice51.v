@@ -199,6 +199,7 @@ wire  [7:0]                   acc_xor_b;
 wire                          acc_zero;
 
 // DPTR
+wire  [7:0]                   com_dptr;
 reg   [7:0]                   l_dptr; 
 wire  [7:0]                   l_dptr_next;
 reg   [7:0]                   h_dptr;
@@ -797,15 +798,21 @@ end
 assign l_dptr_code =  (i_code_data == DPL);
 assign l_dptr_data =  (l_data== DPL);
 
+assign h_dptr_code =  (i_code_data == DPH);
+assign h_dptr_data =  (l_data== DPH);
+
+assign com_dptr = 
+   (op_movdi                                             ) ? i_code_data:
+   (op_xchdi | (op_movda & (l_dptr_code | h_dptr_code))  ) ? acc:
+   (l_dptr_code | h_dptr_code                            ) ? i_reg_rdata:
+                                                             i_data_data;
 assign l_dptr_next = 
-   (op_incd                ) ? (l_dptr - 'd1):
-   (op_orldi               ) ? (l_dptr | l_data):
-   (op_movdi               ) ? i_code_data:
-   (op_xchdi |             
-   (op_movda & l_dptr_code)) ? acc:
-   (l_dptr_code            ) ? i_reg_rdata:
-   (l_dptr_data            ) ? i_data_data:
-                               l_data; 
+   (op_incd                               ) ? (l_dptr - 'd1):
+   (op_orldi                              ) ? (l_dptr | l_data):
+   (op_movdi                              ) ? i_code_data:
+   ( op_xchdi | l_dptr_code | l_dptr_data | 
+     (op_movda & l_dptr_code)             ) ? com_dptr:
+                                             l_data; 
 assign l_dptr_upd  = 
    sme & ((
       (op_orldi | op_movdi | op_xchdi | op_incd)  & (h_data == DPL)) |
@@ -814,17 +821,12 @@ assign l_dptr_upd  =
       (op_movdd & l_dptr_data)
    );
 
-assign h_dptr_code =  (i_code_data == DPH);
-assign h_dptr_data =  (l_data== DPH);
-
 assign h_dptr_next =  
-   (op_orldi               ) ? (h_dptr | l_data): 
-   (op_movdi               ) ? i_code_data:
-   (op_xchdi |              
-   (op_movda & h_dptr_code)) ? acc:
-   (h_dptr_code            ) ? i_reg_rdata:
-   (h_dptr_data            ) ? i_data_data:
-                               h_data;
+   (op_orldi                              ) ? (h_dptr | h_data):
+   (op_movdi                              ) ? i_code_data:
+   ( op_xchdi | h_dptr_code | h_dptr_data |
+     (op_movda & h_dptr_code)             ) ? com_dptr:
+                                             h_data; 
 assign h_dptr_upd  = 
    sme & ((
       (op_orldi | op_movdi | op_xchdi | op_incd) & (h_data == DPH)) |
