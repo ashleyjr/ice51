@@ -154,6 +154,7 @@ reg   [1:0]                   uart_tx_state;
 wire  [1:0]                   uart_tx_state_next;
 
 // CODE
+wire  [7:0]                   data_data;
 wire  [7:0]                   op;
 wire  [4:0]                   op5;
 reg   [7:0]                   op_latched;
@@ -503,19 +504,21 @@ assign o_data_addr =
    (op_push | op_lcall                          ) ? sp_inc:
    (op_ret | op_pop                             ) ? sp:
                                                    i_code_data; 
+
+assign data_data = (op_orldi & hout ) ? (i_data_data | l_data):
+                   (op_incd & sme   ) ? (i_data_data + 'd1):
+                                         i_data_data;
 assign o_data_data = 
-   (op_orldi & hout                       ) ? (i_data_data | l_data):
-   (op_movdd & hdph                       ) ? h_dptr:
-   (op_movdd & hdpl                       ) ? l_dptr:
-   (op_incd & sme                         ) ? (i_data_data + 'd1):
-   ((op_movdd | op_push) & (h_data == BB) ) ? b:
-   (op_movdd                              ) ? i_data_data: 
-   (op_push & (h_data == ACC)             ) ? acc:
-   (op_movd | op_push                     ) ? i_reg_rdata: 
-   (op_movdi                              ) ? i_code_data:
-   (op_lcall & smd0                       ) ? pc_2[7:0]:
-   (op_lcall & smd1                       ) ? {6'h00, pc_next[9:8]}:
-                                             acc;
+   (op_movdd & hdph                                ) ? h_dptr:
+   (op_movdd & hdpl                                ) ? l_dptr: 
+   ((op_movdd | op_push) & (h_data == BB)          ) ? b: 
+   ((op_orldi & hout) | (op_incd & sme) | op_movdd ) ? data_data: 
+   (op_push & (h_data == ACC)                      ) ? acc:
+   (op_movd | op_push                              ) ? i_reg_rdata: 
+   (op_movdi                                       ) ? i_code_data:
+   (op_lcall & smd0                                ) ? pc_2[7:0]:
+   (op_lcall & smd1                                ) ? {6'h00, pc_next[9:8]}:
+                                                      acc;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // STATE
 
