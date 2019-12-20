@@ -2,13 +2,11 @@
 echo "========================================================"
 echo "Running synth..."
 rm -f syn.log
-yosys -p 'synth_ice40 -top ice51_top -blif ice51.blif' rtl/ice51_top.v rtl/ice51.v rtl/mem_1024x8b.v rtl/mem_512x8b.v rtl/dp_mem_512x8b.v> syn.log
+yosys -p 'synth_ice40 -top ice51_top -blif ice51.blif -json ice51.json' rtl/ice51_top.v rtl/ice51.v rtl/mem_1024x8b.v rtl/mem_512x8b.v rtl/dp_mem_512x8b.v> syn.log
 cat syn.log | grep -A20 statistics
 echo "========================================================"
 echo "Running place and route..."
-rm -f blif.log
-yosys -o ice51.syn.v ice51.blif > blif.log
-arachne-pnr -d 1k -q -p etc/ice51.pcf ice51.blif -o ice51.asc 
+nextpnr-ice40 --hx1k --json ice51.json --package tq144 --pcf etc/ice51.pcf --asc ice51.asc
 echo "========================================================"
 echo "Running Timing check..."
 icetime -tmd hx1k ice51.asc > ice51.time
