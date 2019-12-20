@@ -341,34 +341,36 @@ always@(posedge i_clk or negedge i_nrst) begin
    else        uart_p0_rx <= i_uart_rx;
 end
 
+assign uart_state_rx    = (uart_state == SM_UART_RX);
+assign uart_state_start = (uart_state == SM_UART_RX_START);
+
 assign uart_start       = ((uart_state == SM_UART_IDLE) & ~uart_p0_rx);
 assign uart_done        = ((uart_state == SM_UART_WAIT) & uart_full_sample);
 assign uart_full_sample = (uart_count == SAMPLE        );
 assign uart_half_sample = (uart_count == (SAMPLE >> 1) );
 
-assign uart_state_next = (uart_start                                                            ) ? SM_UART_RX_START:
-                         ((uart_state == SM_UART_RX_START)  & uart_half_sample                  ) ? SM_UART_RX:
-                         ((uart_state == SM_UART_RX)        & uart_full_sample & uart_data[0]   ) ? SM_UART_WAIT:
-                         (uart_done                                                             ) ? SM_UART_IDLE:
-                                                                                                    uart_state;
+assign uart_state_next = (uart_start                                      ) ? SM_UART_RX_START:
+                         (uart_state_start & uart_half_sample             ) ? SM_UART_RX:
+                         (uart_state_rx & uart_full_sample & uart_data[0] ) ? SM_UART_WAIT:
+                         (uart_done                                       ) ? SM_UART_IDLE:
+                                                                              uart_state;
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_state  <= SM_UART_IDLE;
    else        uart_state  <= uart_state_next;
 end
 
-assign uart_data_next = (uart_start                                       ) ? START_BIT:
-                        ((uart_state == SM_UART_RX)     & uart_full_sample) ? {uart_p0_rx,uart_data[7:1]}:
-                                                                              uart_data;
+assign uart_data_next = (uart_start                         ) ? START_BIT:
+                        (uart_state_rx & uart_full_sample   ) ? {uart_p0_rx,uart_data[7:1]}:
+                                                                uart_data;
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_data   <= 'd0;
    else        uart_data   <= uart_data_next;
 end
  
-assign uart_count_next =   (  uart_start                                               |
-                              uart_done                                                |
-                              ((uart_state == SM_UART_RX_START)  & uart_half_sample)   |  
-                              ((uart_state == SM_UART_RX)        & uart_full_sample)   ) ? 'd0 : 
-                                                                                           uart_count + 'd1; 
+assign uart_count_next =   (  uart_start | uart_done  |
+                              (uart_state_start  & uart_half_sample)  |  
+                              (uart_state_rx & uart_full_sample)        ) ? 'd0 : uart_count + 'd1; 
+
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_count  <= 'd0;
    else        uart_count  <= uart_count_next;
