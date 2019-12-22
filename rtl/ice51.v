@@ -671,12 +671,11 @@ assign o_reg_wdata =
    (op_movrd & (h_data == DPL)               ) ? l_dptr:
    (op_movrd & (h_data == BB)                ) ? b:
    (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
-   op_orldi                                    ? (i_reg_rdata | l_data):
-   op_xrlda                                    ? (acc ^ i_reg_rdata):      
+   op_orldi                                    ? (i_reg_rdata | l_data): 
    op_movri                                    ? h_data:
    op_incr                                     ? (i_reg_rdata + 'd1):
    (op_decr | op_djnzr)                        ? (i_reg_rdata - 'd1):
-   op_movra                                    ? acc: 
+   (op_movra | op_xrlda                      ) ? acc_next: 
                                                  i_reg_rdata;
 assign h_reg = (h_data < 8'h08);
 
@@ -718,7 +717,7 @@ assign acc_add_wrap = acc + acc_add + (carry & (op_addci | op_addcd | op_addcr))
 assign acc_zero = (acc == 'd0);
 
 assign acc_next = 
-   (op_swap | op_xrla                                    ) ? acc_xor:   
+   (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
    (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
    (op_anlai                                             ) ? (acc & i_code_data):
    ((op_xchdi | op_movad) & (h_data == BB)               ) ? b:
@@ -774,11 +773,12 @@ assign acc_sub_wrap = acc_sub_a - acc_sub_b - acc_sub_c;
 // ACC.XOR
 assign acc_xor_ctrl = op_swap & smd2;
 
-assign acc_xor_a = (op_xrla       ) ?  acc:
-                   (acc_xor_ctrl  ) ? {acc[7:4],acc[7:4]}:
-                                      {acc[3:0],acc[3:0]};
+assign acc_xor_a = (op_xrla | op_xrlda ) ?  acc:
+                   (acc_xor_ctrl       ) ? {acc[7:4],acc[7:4]}:
+                                           {acc[3:0],acc[3:0]};
 
 assign acc_xor_b = (op_xrla       ) ?  h_data:
+                   (op_xrlda      ) ?  i_reg_rdata:
                    (acc_xor_ctrl  ) ? {acc[7:4],acc[3:0]}:
                                       {acc[3:0],acc[7:4]};
 
