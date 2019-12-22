@@ -702,6 +702,25 @@ assign o_reg_waddr[2:0] =
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ACCUMULATOR 
 
+assign acc_zero = (acc == 'd0);
+
+assign acc_next = 
+   (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
+   (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
+   (op_anlai                                             ) ? (acc & i_code_data): 
+   (op_cpla                                              ) ? ~acc:
+   (op_mul & mul_done                                    ) ? mul_ab[7:0]:
+   (op_div & div_done                                    ) ? div_q: 
+   (op_rl | op_rrc | op_rlc | op_div                     ) ? acc_r:   
+   (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
+   (op_movad & (h_data == SP)                            ) ? sp: 
+   (op_subbad | op_subbai | op_subbar | op_deca | op_mul |                 
+    (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]: 
+   (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
+                                                             acc_add_wrap[7:0];
+
+
+// ACC.ADD
 assign acc_add_a = 
    (op_movad | op_mova0 | op_mova1 | op_xchar | 
     op_movar | op_movc | op_movai | op_xchdi | op_clra ) ? 'd0 : acc;
@@ -719,22 +738,6 @@ assign acc_add_b =
 
 assign acc_add_wrap = acc_add_a + acc_add_b + (carry & (op_addci | op_addcd | op_addcr));
 
-assign acc_zero = (acc == 'd0);
-
-assign acc_next = 
-   (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
-   (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
-   (op_anlai                                             ) ? (acc & i_code_data): 
-   (op_cpla                                              ) ? ~acc:
-   (op_mul & mul_done                                    ) ? mul_ab[7:0]:
-   (op_div & div_done                                    ) ? div_q: 
-   (op_rl | op_rrc | op_rlc | op_div                     ) ? acc_r:   
-   (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
-   (op_movad & (h_data == SP)                            ) ? sp: 
-   (op_subbad | op_subbai | op_subbar | op_deca | op_mul |                 
-    (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]: 
-   (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
-                                                             acc_add_wrap[7:0];
 
 // ACC.OR
 assign acc_or_a = acc;
