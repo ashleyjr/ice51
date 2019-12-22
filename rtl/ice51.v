@@ -181,6 +181,7 @@ wire  [9:0]                   pc_2;
 // ACCUMULATOR
 wire  [7:0]                   acc_next;
 reg   [7:0]                   acc; 
+wire  [8:0]                   acc_and;
 wire  [8:0]                   acc_sub_wrap; 
 wire  [8:0]                   acc_add_wrap; 
 wire  [7:0]                   acc_add_a;
@@ -707,7 +708,7 @@ assign acc_zero = (acc == 'd0);
 assign acc_next = 
    (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
    (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
-   (op_anlai                                             ) ? (acc & i_code_data): 
+   (op_anlai                                             ) ? acc_and: 
    (op_cpla                                              ) ? ~acc:
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
    (op_div & div_done                                    ) ? div_q: 
@@ -738,6 +739,9 @@ assign acc_add_b =
 
 assign acc_add_wrap = acc_add_a + acc_add_b + (carry & (op_addci | op_addcd | op_addcr));
 
+// ACC.AND
+
+assign acc_and = (acc & i_code_data); 
 
 // ACC.OR
 assign acc_or_a = acc;
