@@ -704,18 +704,18 @@ assign o_reg_waddr[2:0] =
 
 assign acc_add_a = 
    (op_movad | op_mova0 | op_mova1 | op_xchar | 
-    op_movar | op_movc | op_movai               ) ? 'd0 : acc;
+    op_movar | op_movc | op_movai | op_xchdi | op_clra ) ? 'd0 : acc;
 
 assign acc_add_b = 
-   (op_addci                                    ) ? h_data:
-   (op_addcd | (op_addad & (h_data == BB))      ) ? b: 
-   (op_addai | op_movc | op_movai               ) ? i_code_data: 
-   (op_addad & (h_data == ACC)                  ) ? acc:
-   (op_addad & (h_data == DPH)                  ) ? h_dptr:
-   (op_addad & (h_data == DPL)                  ) ? l_dptr: 
-   (op_addad | op_movad | op_mova0 | op_mova1   ) ? i_data_data:
-   (op_addar | op_addcr | op_xchar | op_movar   ) ? i_reg_rdata:
-                                                    {7'h00, op_inca}; 
+   (op_addci                                                      ) ? h_data:
+   (op_addcd | ((op_addad |op_xchdi | op_movad) & (h_data == BB)) ) ? b: 
+   (op_addai | op_movc | op_movai                                 ) ? i_code_data: 
+   (op_addad & (h_data == ACC)                                    ) ? acc:
+   ((op_xchdi | op_movad | op_addad) & (h_data == DPH)            ) ? h_dptr:
+   ((op_xchdi | op_movad | op_addad) & (h_data == DPL)            ) ? l_dptr:
+   (op_addad | op_movad | op_mova0 | op_mova1                     ) ? i_data_data:
+   (op_addar | op_addcr | op_xchar | op_movar                     ) ? i_reg_rdata:
+                                                                      {7'h00, op_inca};   // op_clra 
 
 assign acc_add_wrap = acc_add_a + acc_add_b + (carry & (op_addci | op_addcd | op_addcr));
 
@@ -724,10 +724,7 @@ assign acc_zero = (acc == 'd0);
 assign acc_next = 
    (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
    (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
-   (op_anlai                                             ) ? (acc & i_code_data):
-   ((op_xchdi | op_movad) & (h_data == BB)               ) ? b:
-   ((op_xchdi | op_movad) & (h_data == DPL)              ) ? l_dptr:
-   ((op_xchdi | op_movad) & (h_data == DPH)              ) ? h_dptr: 
+   (op_anlai                                             ) ? (acc & i_code_data): 
    (op_cpla                                              ) ? ~acc:
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
    (op_div & div_done                                    ) ? div_q: 
@@ -735,8 +732,7 @@ assign acc_next =
    (op_movad & (h_data == PSW)                           ) ? {1'b0, f, 4'b000, f1, 1'b0}: 
    (op_movad & (h_data == SP)                            ) ? sp: 
    (op_subbad | op_subbai | op_subbar | op_deca | op_mul |                 
-    (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]:
-   (op_clra                                              ) ? 'd0:                                  
+    (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]: 
    (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
                                                              acc_add_wrap[7:0];
 
