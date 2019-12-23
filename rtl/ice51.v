@@ -889,9 +889,8 @@ end
 assign b_l_sel       = (l_data == BB);
 assign b_h_sel_low   = ((h_data >> 3) == (BB >> 3));
 assign b_h_sel       = (h_data == BB);
-assign b_next        = 
-   (op_setb   & b_h_sel_low                        ) ? b | (1'b1 << h_data[2:0]): 
-   (op_movbc  & b_h_sel_low                        ) ? b_mask: 
+assign b_next        =  
+   ((op_setb | op_movbc)  & b_h_sel_low            ) ? b_mask: 
    (((op_movdt0 | op_movdt1 | op_pop) & b_h_sel) |
      (op_movdd  & b_l_sel)                         ) ? i_data_data:
    ((op_xchdi & b_h_sel) | (op_movda  & d_bb)      ) ? acc:  
@@ -901,14 +900,16 @@ assign b_next        =
    (op_xrldi  & b_h_sel                            ) ? b ^ l_data:
                                                        b;
 
-assign b_mask[7] = (h_data[2:0] == 3'h7) ? carry : b[7];
-assign b_mask[6] = (h_data[2:0] == 3'h6) ? carry : b[6];
-assign b_mask[5] = (h_data[2:0] == 3'h5) ? carry : b[5];
-assign b_mask[4] = (h_data[2:0] == 3'h4) ? carry : b[4];
-assign b_mask[3] = (h_data[2:0] == 3'h3) ? carry : b[3];
-assign b_mask[2] = (h_data[2:0] == 3'h2) ? carry : b[2];
-assign b_mask[1] = (h_data[2:0] == 3'h1) ? carry : b[1];
-assign b_mask[0] = (h_data[2:0] == 3'h0) ? carry : b[0];
+assign b_mask_core = (op_setb) ? 1'b1 : carry;
+
+assign b_mask[7] = (h_data[2:0] == 3'h7) ? b_mask_core : b[7];
+assign b_mask[6] = (h_data[2:0] == 3'h6) ? b_mask_core : b[6];
+assign b_mask[5] = (h_data[2:0] == 3'h5) ? b_mask_core : b[5];
+assign b_mask[4] = (h_data[2:0] == 3'h4) ? b_mask_core : b[4];
+assign b_mask[3] = (h_data[2:0] == 3'h3) ? b_mask_core : b[3];
+assign b_mask[2] = (h_data[2:0] == 3'h2) ? b_mask_core : b[2];
+assign b_mask[1] = (h_data[2:0] == 3'h1) ? b_mask_core : b[1];
+assign b_mask[0] = (h_data[2:0] == 3'h0) ? b_mask_core : b[0];
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst)    b <= 'd0;
