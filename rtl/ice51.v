@@ -195,6 +195,7 @@ wire  [7:0]                   acc_or;
 wire  [7:0]                   acc_or_a;
 wire  [7:0]                   acc_or_b;
 wire  [7:0]                   acc_r;
+wire  [7:0]                   acc_not;
 wire  [7:0]                   acc_xor;
 wire  [7:0]                   acc_xor_a;
 wire  [7:0]                   acc_xor_b;
@@ -709,7 +710,7 @@ assign acc_next =
    (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
    (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
    (op_anlai                                             ) ? acc_and: 
-   (op_cpla                                              ) ? ~acc:
+   (op_cpla                                              ) ? acc_not:
    (op_mul & mul_done                                    ) ? mul_ab[7:0]:
    (op_div & div_done                                    ) ? div_q: 
    (op_rl | op_rrc | op_rlc | op_div                     ) ? acc_r:   
@@ -721,7 +722,7 @@ assign acc_next =
                                                              acc_add_wrap[7:0];
 
 
-// ACC.ADD
+// ACC.ADD (+assign)
 assign acc_add_a = 
    (op_movad | op_mova0 | op_mova1 | op_xchar | 
     op_movar | op_movc | op_movai | op_xchdi | op_clra ) ? 'd0 : acc;
@@ -762,6 +763,9 @@ assign acc_r[0]   =  (op_div  ) ? 1'b0:
                      (op_rl   ) ? acc[7]:
                      (op_rrc  ) ? acc[1]:
                                   carry;
+// ACC.NOT
+assign acc_not = ~acc;
+                               
 // ACC.SUB
 assign acc_sub = 
    (op_subbai                       ) ? h_data:
