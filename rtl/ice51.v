@@ -901,8 +901,14 @@ assign b_next        =
    (op_xrldi  & b_h_sel                            ) ? b ^ l_data:
                                                        b;
 
-assign b_mask = (b[h_data[2:0]]) ? (b & ~(~carry << h_data[2:0])):
-                                   (b |  (carry << h_data[2:0]));
+assign b_mask[7] = (h_data[2:0] == 3'h7) ? carry : b[7];
+assign b_mask[6] = (h_data[2:0] == 3'h6) ? carry : b[6];
+assign b_mask[5] = (h_data[2:0] == 3'h5) ? carry : b[5];
+assign b_mask[4] = (h_data[2:0] == 3'h4) ? carry : b[4];
+assign b_mask[3] = (h_data[2:0] == 3'h3) ? carry : b[3];
+assign b_mask[2] = (h_data[2:0] == 3'h2) ? carry : b[2];
+assign b_mask[1] = (h_data[2:0] == 3'h1) ? carry : b[1];
+assign b_mask[0] = (h_data[2:0] == 3'h0) ? carry : b[0];
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst)    b <= 'd0;
