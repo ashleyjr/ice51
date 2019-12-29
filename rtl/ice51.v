@@ -181,7 +181,8 @@ wire  [7:0]                   pc_cjnead_sel;
 
 // ACCUMULATOR
 wire  [7:0]                   acc_next;
-reg   [7:0]                   acc; 
+reg   [7:0]                   acc;
+reg                           acc_zero;
 wire  [8:0]                   acc_and;
 wire  [8:0]                   acc_sub_wrap; 
 wire  [8:0]                   acc_add_wrap; 
@@ -200,7 +201,6 @@ wire  [7:0]                   acc_not;
 wire  [7:0]                   acc_xor;
 wire  [7:0]                   acc_xor_a;
 wire  [7:0]                   acc_xor_b;
-wire                          acc_zero;
 
 // DPTR
 wire  [7:0]                   com_dptr;
@@ -704,8 +704,6 @@ assign o_reg_waddr[2:0] =
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ACCUMULATOR 
 
-assign acc_zero = (acc == 'd0);
-
 assign acc_next = 
    (op_swap | op_xrla | op_xrlda                         ) ? acc_xor:   
    (op_orla | (op_setb & (h_data[7:3] == (BIT_ACC >> 3)))) ? acc_or:   
@@ -800,7 +798,13 @@ always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst)       acc <= 'd0;
    else if(acc_upd)  acc <= acc_next;
 end
- 
+
+always@(posedge i_clk or negedge i_nrst) begin
+   if(!i_nrst)       acc_zero <= 1'b0;
+   else if(acc_upd)  acc_zero <= (acc_next == 'd0);
+end
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // DPTR
 
