@@ -210,6 +210,7 @@ wire  [7:0]                   h_dptr_next;
 wire  [15:0]                  dptr;
 
 // CARRY
+wire  [7:0]                   carry_sel;
 reg                           carry;
 wire                          carry_next;
 wire                          carry_upd;
@@ -859,6 +860,12 @@ assign dptr = {h_dptr,l_dptr};
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CARRY
 
+assign carry_sel = (op_cjneai    ) ? h_data:
+                   (h_data == DPH) ? h_dptr:
+                   (h_data == DPL) ? l_dptr:
+                                     i_reg_dara;
+assign carry_cmp = acc < carry_sel;
+
 assign carry_next = 
    (op_subbad & carry & d_acc) |
    ((op_subbad | op_subbar | op_subbai) & acc_sub_wrap[8]) |
@@ -867,10 +874,7 @@ assign carry_next =
                  ((i_code_data[7:3] == (BB >> 3))  & b[i_code_data[2:0]]))) |
    (op_rrc & acc[0]) |
    (op_rlc & acc[7]) | 
-   (op_cjnead & (h_data == DPH) & (acc < h_dptr)) |
-   (op_cjnead & (h_data == DPL) & (acc < l_dptr)) |
-   (op_cjneai & (acc < h_data)) |
-   (op_cjnead & (acc < i_reg_rdata)) |
+   ((op_cjnead | op_cjneai) & carry_cmp) |
    (op_cjneri & (i_reg_rdata < h_data)) |
    op_setbc;
 
