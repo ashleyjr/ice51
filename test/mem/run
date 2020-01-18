@@ -1,0 +1,14 @@
+#!/bin/bash
+
+CMD="iverilog -o mem.dat -c etc/filelist.txt"
+echo $CMD
+$CMD
+
+CMD="vvp mem.dat -vcd > /dev/null 2>&1"
+echo $CMD
+$CMD 
+
+CMD="gtkwave -S etc/signals.tcl mem.vcd"
+echo $CMD
+$CMD
+
