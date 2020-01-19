@@ -2,7 +2,7 @@
 echo "========================================================"
 echo "Running synth..."
 rm -f syn.log
-yosys -p 'synth_ice40 -top mem -blif mem.blif -json mem.json' rtl/mem.v ../../rtl/mem_1024x8b.v > syn.log
+yosys -p 'synth_ice40 -top mem -blif mem.blif -json mem.json' rtl/mem.v ../../rtl/mem_1024x8b.v ../../rtl/mem_512x8b.v> syn.log
 cat syn.log | grep -A20 statistics
 echo "========================================================"
 echo "Running place and route..."
