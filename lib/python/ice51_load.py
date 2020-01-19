@@ -68,10 +68,10 @@ def main(options):
 
     u = uart()
 
-    print "Connected:     " + u.getName()
-    print "Running test:  " + options.test
+    print "Connected:      " + u.getName()
+    print "Running test:   " + options.test
     h = options.test.replace(".c",".hex")
-    print "Loading hex:   " + h
+    print "Loading hex:    " + h
 
     f = open(h, 'r')
     data = f.read()
@@ -83,11 +83,30 @@ def main(options):
         u.tx(c)
         byts += 1
 
-    print "Bytes written: " + str(byts)
+    print "Bytes written:  " + str(byts)
 
-    for i in range(0,10):
-        time.sleep(0.1)
-        print u.rx()
+    c = options.test.replace(".c",".checks")
+    print "Loading checks: " + c
+
+    f = open(c, 'r')
+    data = f.read()
+    f.close()
+
+    ok = True
+    for d in data.split('\n')[0:-1]:
+        if '0' == d[0]:
+            break
+        else:
+            a = int(d[1:3], 16)
+            b = u.rx()
+            print "Got: " +str(hex(a)) + ", Exp: " +str(hex(b))
+            if a != b:
+                ok = False
+
+    if ok:
+        print "PASSED"
+    else:
+        print "FAILED"
 
     u.finish()
 

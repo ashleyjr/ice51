@@ -408,7 +408,7 @@ end
 assign uart_tx_start = (sme & op_movxda & (dptr == 16'h0201));
 assign uart_tx_shift = (uart_tx_state == SM_UART_TX_SEND) & uart_tx_sample;
 assign uart_tx_next  = (uart_tx_start) ? o_data_data:
-                       (uart_tx_shift) ? {uart_tx[6:0],1'b1}:
+                       (uart_tx_shift) ? {1'b1, uart_tx[7:1]}:
                                          uart_tx;
 
 assign uart_tx_state_idle  = (uart_tx_state == SM_UART_TX_IDLE);
@@ -431,7 +431,7 @@ end
 
 assign o_uart_tx = (uart_tx_state_idle ) ? 1'b1:
                    (uart_tx_state_start) ? 1'b0:
-                                           uart_tx[7];
+                                           uart_tx[0];
 
 assign uart_tx_sample = (SAMPLE == uart_tx_sample_count); 
 

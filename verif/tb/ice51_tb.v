@@ -90,7 +90,7 @@ module ice51_tb;
          uart_tx = 0; 
          while(o_uart_tx) 
             @(posedge i_clk); 
-         for(j=7;j>-1;j=j-1) begin
+         for(j=0;j<8;j=j+1) begin
             #SAMPLE_TB  uart_tx[j] = o_uart_tx;
          end 
          #SAMPLE_TB
