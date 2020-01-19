@@ -34,8 +34,9 @@ module mem(
                CMD_DATA_RHS   = 4'h2,
                CMD_ADDR_READ  = 4'h3,
                CMD_ADDR_LOAD  = 4'h4,
-               CMD_ADDR_RHS   = 4'h5;
-
+               CMD_ADDR_RHS   = 4'h5,
+               CMD_1024X8B_WE = 4'h6,
+               CMD_1024X8B_RE = 4'h7;
 
    // RESYNC
    reg                           rx0;
@@ -63,6 +64,9 @@ module mem(
    reg   [31:0]                  data;
    wire  [31:0]                  addr_next;
    reg   [31:0]                  addr;
+
+   // MEMORY
+   wire  [7:0]                   mem_1024x8b_rdata;
 
 
    assign   {o_led4, o_led3, o_led2, o_led1, o_led0} = rx_data[4:0];
@@ -195,14 +199,16 @@ module mem(
    assign rx_cmd = rx_data[3:0];
    
    // Data 
-   assign cmd_data_read = rx_valid & (rx_cmd == CMD_DATA_READ);   // TX lowest 8 bits
-   assign cmd_data_load = rx_valid & (rx_cmd == CMD_DATA_LOAD);   // Shift left 4 bits and put in nibble at bottom
-   assign cmd_data_rhs  = rx_valid & (rx_cmd == CMD_DATA_RHS);    // Shift right 8 bits
-   
+   assign cmd_data_read       = rx_valid & (rx_cmd == CMD_DATA_READ);   // TX lowest 8 bits
+   assign cmd_data_load       = rx_valid & (rx_cmd == CMD_DATA_LOAD);   // Shift left 4 bits and put in nibble at bottom
+   assign cmd_data_rhs        = rx_valid & (rx_cmd == CMD_DATA_RHS);    // Shift right 8 bits
+   assign cmd_data_1024x8b_re = rx_valid & (rx_cmd == CMD_1024X8B_RE);
 
-   assign data_next = (cmd_data_load) ? {data[27:0],  rx_data[7:4]}:
-                      (cmd_data_rhs ) ? {8'h00,       data[31:8]  }:
-                                        data;
+
+   assign data_next = (cmd_data_load      ) ? {data[27:0],  rx_data[7:4]      }:
+                      (cmd_data_rhs       ) ? {8'h00,       data[31:8]        }:
+                      (cmd_data_1024x8b_re) ? {data[31:8],  mem_1024x8b_rdata }:
+                                              data;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst) data <= 'd0;
@@ -224,5 +230,25 @@ module mem(
       else        addr <= addr_next; 
    end
 
-  
+
+   ////////////////////////////////////////////////////////////////////////////////////////////////////
+   // MEMORY
+
+   assign mem_1024x8b_we = rx_valid & (rx_cmd == CMD_1024X8B_WE);
+   
+
+
+   mem_1024x8b mem_1024x8b (
+      .i_nrst     (i_nrst           ),
+      .i_clk      (i_clk            ),
+      .i_addr     (addr[9:0]        ),
+      .i_we       (mem_1024x8b_we   ),
+      .i_wdata    (data[7:0]        ),   
+      .o_rdata    (mem_1024x8b_rdata)
+   );
+   
+
+   
+   
+
 endmodule

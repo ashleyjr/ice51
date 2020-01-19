@@ -80,6 +80,66 @@ module mem_tb;
          #(50*SAMPLE_TB)      uart_send(8'h02); 
       end
 
+      // Load data 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'hA1);  
+     
+      // Load addr 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'hF4); 
+      #(50*SAMPLE_TB)   uart_send(8'hF4);
+
+      // Write 
+      #(50*SAMPLE_TB)   uart_send(8'h06); 
+
+      // Load data 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'h01); 
+      #(50*SAMPLE_TB)   uart_send(8'hB1);  
+     
+      // Load addr 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'hF4); 
+      #(50*SAMPLE_TB)   uart_send(8'hE4);
+
+      // Write 
+      #(50*SAMPLE_TB)   uart_send(8'h06); 
+
+      // Load addr 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'h04); 
+      #(50*SAMPLE_TB)   uart_send(8'hF4); 
+      #(50*SAMPLE_TB)   uart_send(8'hF4);
+
+      // Read
+      #(50*SAMPLE_TB)   uart_send(8'h07); 
+
+
       #100000
       $finish;
 	end

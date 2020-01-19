@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CMD="iverilog -o mem.dat -c etc/filelist.txt"
+CMD="iverilog -o mem.dat -D SIM -c etc/filelist.txt"
 echo $CMD
 $CMD
 

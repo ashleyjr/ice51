@@ -120,6 +120,18 @@ class uart:
         return data
 
 
+    def writeMem(self, addr, data, code):
+        self.loadDataBuffer(data)
+        self.loadAddrBuffer(addr)
+        self.tx(code)
+
+    def readMem(self, addr, code):
+        self.loadAddrBuffer(addr)
+        self.tx(code)
+        return self.unloadDataBuffer()
+
+
+
 def main():
 
     u = uart()
@@ -133,9 +145,10 @@ def main():
                 0x1E, 0x00, 0x1E, 0x00          ]
     for p in pattern:
         u.tx(p)
-        time.sleep(0.2)
+        time.sleep(0.1)
 
     u.clearRx()
+
 
     print " - Checking data buffer"
 
@@ -143,7 +156,9 @@ def main():
     i = u.unloadDataBuffer()
 
     if o == i:
-        print "   > PASS"
+        print "     > PASS"
+
+
 
     print " - Checking addr buffer"
 
@@ -151,7 +166,28 @@ def main():
     i = u.unloadDataBuffer()
 
     if o == i:
-        print "   > PASS"
+        print "     > PASS"
+
+
+    print " - 1024x8b memory test"
+
+    model = [-1] * 1024
+
+    for i in range(0, 1024):
+        op =  random.choice(['read','write'])
+        addr = random.randrange(0,1024)
+        if 'write' == op:
+            data = random.randrange(0,256)
+            u.writeMem(addr, data, 6)
+            model[addr] = data
+            #print "WRITE: Addr = " + str(addr) + ", Data = " + str(data)
+        if ('read' == op) and (model[addr] != -1):
+            m = model[addr]
+            r = u.readMem(addr, 7)
+            if m != r:
+                print "FAIL..."
+                print "READ: Addr = " + str(addr)+ ", Model=" + str(m) + ", RAM=" + str(r)
+    print "     > PASS"
 
 
 
