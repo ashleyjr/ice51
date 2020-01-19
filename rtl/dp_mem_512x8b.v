@@ -52,8 +52,8 @@ module dp_mem_512x8b (
                         1'bx,
                         i_wdata[0] };
       SB_RAM40_4K #(
-         .WRITE_MODE (32'sd0  ),
-         .READ_MODE  (32'sd0  )
+         .WRITE_MODE (32'sd1  ),
+         .READ_MODE  (32'sd1  )
       ) ram (
          .MASK       (16'hxxxx),
          .RDATA      (s_rdata ),

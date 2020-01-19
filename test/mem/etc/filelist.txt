@@ -1,4 +1,5 @@
 rtl/mem.v
 ../../rtl/mem_1024x8b.v
 ../../rtl/mem_512x8b.v
+../../rtl/dp_mem_512x8b.v
 verif/mem_tb.v

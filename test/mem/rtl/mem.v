@@ -38,7 +38,10 @@ module mem(
                CMD_1024X8B_WE = 4'h6,
                CMD_1024X8B_RE = 4'h7,
                CMD_512X8B_WE  = 4'h8,
-               CMD_512X8B_RE  = 4'h9;
+               CMD_512X8B_RE  = 4'h9,
+               CMD_DP_512X8B_WE  = 4'hA,
+               CMD_DP_512X8B_RE  = 4'hB;
+
 
    // RESYNC
    reg                           rx0;
@@ -70,7 +73,7 @@ module mem(
    // MEMORY
    wire  [7:0]                   mem_1024x8b_rdata;
    wire  [7:0]                   mem_512x8b_rdata;
-
+   wire  [7:0]                   mem_dp_512x8b_rdata;
 
 
    assign   {o_led4, o_led3, o_led2, o_led1, o_led0} = rx_data[4:0];
@@ -208,14 +211,17 @@ module mem(
    assign cmd_data_rhs        = rx_valid & (rx_cmd == CMD_DATA_RHS);    // Shift right 8 bits
    assign cmd_data_1024x8b_re = rx_valid & (rx_cmd == CMD_1024X8B_RE);
    assign cmd_data_512x8b_re  = rx_valid & (rx_cmd == CMD_512X8B_RE);
+   assign cmd_data_dp_512x8b_re  = rx_valid & (rx_cmd == CMD_DP_512X8B_RE);
 
 
 
-   assign data_next = (cmd_data_load      ) ? {data[27:0],  rx_data[7:4]      }:
-                      (cmd_data_rhs       ) ? {8'h00,       data[31:8]        }:
-                      (cmd_data_1024x8b_re) ? {data[31:8],  mem_1024x8b_rdata }:
-                      (cmd_data_512x8b_re ) ? {data[31:8],  mem_512x8b_rdata  }:                        
-                                               data;
+
+   assign data_next = (cmd_data_load      )     ? {data[27:0],  rx_data[7:4]        }:
+                      (cmd_data_rhs       )     ? {8'h00,       data[31:8]          }:
+                      (cmd_data_1024x8b_re)     ? {data[31:8],  mem_1024x8b_rdata   }:
+                      (cmd_data_512x8b_re )     ? {data[31:8],  mem_512x8b_rdata    }:                        
+                      (cmd_data_dp_512x8b_re )  ? {data[31:8],  mem_dp_512x8b_rdata }:                                                 
+                                                   data;
 
    always@(posedge i_clk or negedge i_nrst) begin
       if(!i_nrst) data <= 'd0;
@@ -261,6 +267,18 @@ module mem(
       .i_we       (mem_512x8b_we   ),
       .i_wdata    (data[7:0]        ),   
       .o_rdata    (mem_512x8b_rdata)
+   );
+   
+   assign mem_dp_512x8b_we = rx_valid & (rx_cmd == CMD_DP_512X8B_WE);
+   
+   dp_mem_512x8b dp_mem_512x8b (
+      .i_nrst     (i_nrst           ),
+      .i_clk      (i_clk            ),
+      .i_raddr    (addr[8:0]        ),
+      .i_waddr    (addr[8:0]        ),
+      .i_we       (mem_dp_512x8b_we   ),
+      .i_wdata    (data[7:0]        ),   
+      .o_rdata    (mem_dp_512x8b_rdata)
    );
    
    

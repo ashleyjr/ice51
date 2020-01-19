@@ -216,6 +216,28 @@ def main():
     print "     > PASS"
 
 
+    print " - 512x8b DP memory test"
+
+    model = [-1] * 512
+
+    for i in range(0, 512):
+        op =  random.choice(['read','write'])
+        addr = random.randrange(0,512)
+        if 'write' == op:
+            data = random.randrange(0,256)
+            u.writeMem(addr, data, 10)
+            model[addr] = data
+            #print "WRITE: Addr = " + str(addr) + ", Data = " + str(data)
+        if ('read' == op) and (model[addr] != -1):
+            m = model[addr]
+            r = u.readMem(addr, 11)
+            if m != r:
+                print "FAIL..."
+                print "READ: Addr = " + str(addr)+ ", Model=" + str(m) + ", RAM=" + str(r)
+                sys.exit(0)
+    print "     > PASS"
+
+
 
 
     print "Finished"
