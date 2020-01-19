@@ -52,6 +52,9 @@ module mem_tb;
       end
    endtask
 
+
+   
+
    integer i;
   
    initial begin 
@@ -60,19 +63,22 @@ module mem_tb;
       #1000             i_nrst      = 0;
       #1000             i_nrst      = 1;
 
+    
+      // Load data 
+      #(50*SAMPLE_TB)   uart_send(8'h11); 
+      #(50*SAMPLE_TB)   uart_send(8'h21); 
+      #(50*SAMPLE_TB)   uart_send(8'h31); 
+      #(50*SAMPLE_TB)   uart_send(8'h41); 
+      #(50*SAMPLE_TB)   uart_send(8'h51); 
+      #(50*SAMPLE_TB)   uart_send(8'h61); 
+      #(50*SAMPLE_TB)   uart_send(8'h71); 
+      #(50*SAMPLE_TB)   uart_send(8'h81);  
      
-      #(100*SAMPLE_TB)  uart_send(8'hAA); 
-
-      #7777
-
-      #(100*SAMPLE_TB)  uart_send(8'h00); 
-
-      #3333
-
-      #(100*SAMPLE_TB)  uart_send(8'h23); 
-
-
-
+      // Echo data
+      repeat(4) begin
+         #(50*SAMPLE_TB)      uart_send(8'h00); 
+         #(50*SAMPLE_TB)      uart_send(8'h02); 
+      end
 
       #100000
       $finish;

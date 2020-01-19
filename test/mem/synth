@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "========================================================"
+echo "Running synth..."
+rm -f syn.log
+yosys -p 'synth_ice40 -top mem -blif mem.blif -json mem.json' rtl/mem.v > syn.log
+cat syn.log | grep -A20 statistics
+echo "========================================================"
+echo "Running place and route..."
+nextpnr-ice40 --hx1k --json mem.json --package tq144 --pcf etc/mem.pcf --asc mem.asc
+echo "========================================================"
+echo "Running Timing check..."
+icetime -tmd hx1k mem.asc > mem.time
+cat mem.time | grep -A20 "Total path delay"
