@@ -490,15 +490,14 @@ assign o_data_wr   =
       (op_orldi & ~hdph  & ~hdpl & hout) |
       (op_movd & (i_code_data > 8'h07))
    );
+
 assign o_data_addr = 
-   (op_mova0 | op_movdt0 |
-    op_mova1 | op_movdt1 | op_movt1a            ) ? i_reg_rdata: 
-   (op_incd & (smd1 | sme)                      ) ? h_data: 
-   (  op_movdd & smd2 & nl                      ) ? l_data: 
-   (op_movdi | op_movdd | op_cjnead | op_orldi  ) ? h_data:
-   (op_push | op_lcall                          ) ? sp_inc:
-   (op_ret | op_pop                             ) ? sp:
-                                                   i_code_data; 
+   (op_mova0 | op_movdt0 | op_mova1 | op_movdt1 | op_movt1a                ) ? i_reg_rdata:  
+   ((~(op_incd & smd1 | sme)) & op_movdd & smd2 & nl                       ) ? l_data: 
+   ((op_incd & (smd1 | sme)) | op_movdi | op_movdd | op_cjnead | op_orldi  ) ? h_data:
+   (op_push | op_lcall                                                     ) ? sp_inc:
+   (op_ret | op_pop                                                        ) ? sp:
+                                                                              i_code_data; 
 
 assign data_data = (op_orldi & hout ) ? (i_data_data | l_data):
                    (op_incd & sme   ) ? (i_data_data + 'd1):
