@@ -565,7 +565,7 @@ assign pc_fwd     = pc_sjmp & n_code_data[7];
 
 assign pc_replace = sme & (op_ljmp | op_lcall);
 
-assign pc_jb      = sme & op_jb & (acc[h_data[3:0]] == 1'b1); 
+assign pc_jb      = sme & op_jb & acc[h_data[3:0]]; 
 assign pc_jb_bck  = pc_jb & l_data[7]; 
 assign pc_jb_fwd  = pc_jb & ~l_data[7];
 
