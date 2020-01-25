@@ -662,12 +662,12 @@ assign o_reg_wdata =
    (op_movrd & (h_data == DPH)               ) ? h_dptr:
    (op_movrd & (h_data == DPL)               ) ? l_dptr:
    (op_movrd & (h_data == BB)                ) ? b:
-   (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data:
+   (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data: 
+   op_movri                                    ? h_data: 
+   (op_movra | op_xrlda                      ) ? acc_next:
    op_orldi                                    ? (i_reg_rdata | l_data): 
-   op_movri                                    ? h_data:
    op_incr                                     ? (i_reg_rdata + 'd1):
    (op_decr | op_djnzr)                        ? (i_reg_rdata - 'd1):
-   (op_movra | op_xrlda                      ) ? acc_next: 
                                                  i_reg_rdata;
 assign h_reg = (h_data < 8'h08);
 
