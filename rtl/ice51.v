@@ -138,8 +138,6 @@ reg   [$clog2(SAMPLE)-1:0]    uart_count;
 wire  [$clog2(SAMPLE)-1:0]    uart_count_next;
 reg   [7:0]                   uart_data;
 wire  [7:0]                   uart_data_next; 
-reg   [9:0]                   uart_rx_count;
-wire  [9:0]                   uart_rx_count_next; 
 wire                          uart_load_done;
 reg                           uart_load_done_latched;
 wire  [7:0]                   uart_tx_next;
@@ -383,18 +381,10 @@ always@(posedge i_clk or negedge i_nrst) begin
    else        uart_count  <= uart_count_next;
 end
 
-assign uart_rx_count_next  = (uart_done) ? (uart_rx_count + 'd1) : uart_rx_count;
-
-always@(posedge i_clk or negedge i_nrst) begin
-   if(!i_nrst) uart_rx_count  <= 'd0;
-   else        uart_rx_count  <= uart_rx_count_next;
-end
-
 `ifdef PRELOAD
 assign uart_load_done = 1'b1;
 `else
-assign uart_load_done = ((uart_rx_count_next == 'd0) & uart_done) | 
-                        uart_load_done_latched;
+assign uart_load_done = ((pc_next == 'd0) & uart_done) | uart_load_done_latched;
 `endif
 
 always@(posedge i_clk or negedge i_nrst) begin
@@ -458,9 +448,8 @@ end
 
 assign o_code_data = uart_data;
 assign o_code_wr   = uart_done & ~uart_load_done;
-assign o_code_addr = (smd0 & op_movc  ) ? (acc + dptr):
-                     (uart_load_done  ) ?  pc : 
-                                          uart_rx_count; 
+assign o_code_addr = (smd0 & op_movc ) ? (acc + dptr) : pc; 
+
 assign op          = (smd0) ? i_code_data : op_latched;
 assign op5         = op[7:3];
 assign h_data      = (smd1) ? i_code_data : h_data_latched;
@@ -549,13 +538,13 @@ assign smd2 = (state == SM_DECODE2);
 assign sme  = (state == SM_EXECUTE);  
 
 assign state_next = 
-   (smf  & uart_load_done   ) ? SM_DECODE0:  
-   (smd0 & (d3 | d1)        ) ? SM_DECODE1:  
-   (smd0                    ) ? SM_EXECUTE:  
-   (smd1 & d3               ) ? SM_DECODE2:  
-   (smd1 | smd2             ) ? SM_EXECUTE: 
-   (sme & sme_extend_done   ) ? SM_FETCH: 
-                                state;
+   (smf  & uart_load_done_latched   ) ? SM_DECODE0:  
+   (smd0 & (d3 | d1)                ) ? SM_DECODE1:  
+   (smd0                            ) ? SM_EXECUTE:  
+   (smd1 & d3                       ) ? SM_DECODE2:  
+   (smd1 | smd2                     ) ? SM_EXECUTE: 
+   (sme & sme_extend_done           ) ? SM_FETCH: 
+                                        state;
 
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) state  <= 'd0;
@@ -624,7 +613,7 @@ assign pc_ret_bot = smd2 & op_ret;
 assign pc_2 = pc_next + 'd1;
 
 assign pc_inc = 
-      (smf & uart_load_done)   |
+      (smf & uart_load_done_latched)   |
       (smd1 & ~(   
          op_movrd | op_pop | op_clrb  | op_cplb | op_xchdi | op_addci | op_movbc | op_setb | op_swap
        ))  | 
@@ -657,7 +646,8 @@ assign pc_next =
    (pc_replace                                                 ) ? {h_data,l_data}:
    (pc_bck | pc_jnz_bck | pc_jz_bck | pc_djnzr_bck |  
     pc_jb_bck | pc_cjne_bck | pc_jc_bck | pc_jnc_bck           ) ? pc - pc_sub - 'd1:  
-   (pc_add_l_data | pc_add_h_data | pc_add_code_data | pc_inc  ) ? pc + pc_add:  
+   (pc_add_l_data | pc_add_h_data | pc_add_code_data | pc_inc |
+    (~uart_load_done_latched & uart_done)                              ) ? pc + pc_add:  
                                                                    pc;
 
 always@(posedge i_clk or negedge i_nrst) begin
