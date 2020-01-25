@@ -856,7 +856,7 @@ assign dptr = {h_dptr,l_dptr};
 assign carry_sel = (op_cjneai    ) ? h_data:
                    (h_data == DPH) ? h_dptr:
                    (h_data == DPL) ? l_dptr:
-                                     i_reg_dara;
+                                     h_data;
 assign carry_cmp = acc < carry_sel;
 
 assign carry_next = 
