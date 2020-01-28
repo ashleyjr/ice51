@@ -664,9 +664,8 @@ assign o_reg_wdata =
    (op_movrd & (h_data == BB)                ) ? b:
    (op_movdt0 | op_movdt1 | op_movrd | op_pop) ? i_data_data: 
    op_movri                                    ? h_data: 
-   (op_movra | op_xrlda                      ) ? acc_next:
-   op_orldi                                    ? (i_reg_rdata | l_data): 
-   op_incr                                     ? (i_reg_rdata + 'd1):
+   (op_movra | op_xrlda | op_incr            ) ? acc_next:
+   op_orldi                                    ? (i_reg_rdata | l_data):  
    (op_decr | op_djnzr)                        ? (i_reg_rdata - 'd1):
                                                  i_reg_rdata;
 assign h_reg = (h_data < 8'h08);
@@ -713,7 +712,9 @@ assign acc_next =
 // ACC.ADD (+assign)
 assign acc_add_a = 
    (op_movad | op_mova0 | op_mova1 | op_xchar | 
-    op_movar | op_movc | op_movai | op_xchdi | op_clra ) ? 'd0 : acc;
+    op_movar | op_movc | op_movai | op_xchdi | op_clra ) ? 'd0 : 
+   (op_incr                                            ) ? 'd1 :
+                                                            acc;
 
 assign acc_add_b = 
    (op_addci                                                      ) ? h_data:
@@ -723,7 +724,7 @@ assign acc_add_b =
    ((op_xchdi | op_movad | op_addad) & (h_data == DPH)            ) ? h_dptr:
    ((op_xchdi | op_movad | op_addad) & (h_data == DPL)            ) ? l_dptr:
    (op_addad | op_movad | op_mova0 | op_mova1                     ) ? i_data_data:
-   (op_addar | op_addcr | op_xchar | op_movar                     ) ? i_reg_rdata:
+   (op_addar | op_addcr | op_xchar | op_movar | op_incr           ) ? i_reg_rdata:
                                                                       {7'h00, op_inca};   // op_clra 
 
 assign acc_add_wrap = acc_add_a + acc_add_b + (carry & (op_addci | op_addcd | op_addcr));
