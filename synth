@@ -6,8 +6,8 @@ yosys -p 'synth_ice40 -top ice51_top -blif ice51.blif -json ice51.json' rtl/ice5
 cat syn.log | grep -A20 statistics
 echo "========================================================"
 echo "Running place and route..."
-nextpnr-ice40 --hx1k --json ice51.json --package tq144 --pcf etc/ice51.pcf --asc ice51.asc
+nextpnr-ice40 --hx8k --json ice51.json --package ct256 --pcf etc/ice51.pcf --asc ice51.asc
 echo "========================================================"
 echo "Running Timing check..."
-icetime -tmd hx1k ice51.asc > ice51.time
+icetime -tmd hx8k ice51.asc > ice51.time
 cat ice51.time | grep -A20 "Total path delay"

@@ -1,4 +1,4 @@
-set_io i_clk      21
-set_io i_nrst     78
-set_io o_uart_tx  8
-set_io i_uart_rx  9
+set_io i_clk      J3
+set_io i_nrst     P1
+set_io o_uart_tx  P2
+set_io i_uart_rx  R1
