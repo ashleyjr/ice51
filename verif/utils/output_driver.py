@@ -35,7 +35,7 @@ def main(start, end, filename, length):
                 print("1" + d )
 
             # Pos Dec
-            elif "//" in j:
+            elif ("//" in j) and not (end in j):
                 d = j.replace("//","")
                 d = str(hex(int(d)))[2:4]
                 if len(d) < 2:
@@ -48,7 +48,7 @@ def main(start, end, filename, length):
             found = True
 
         if ("// "+end) in j:
-            break
+            foud = False
 
     while(checks < int(length)):
         print("000")

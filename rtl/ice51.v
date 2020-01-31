@@ -705,6 +705,7 @@ assign acc_next =
    (op_movad & (h_data == SP)                            ) ? sp: 
    (op_subbad | op_subbai | op_subbar | op_deca | op_mul |                 
     (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]: 
+   (op_movxad & (dptr == 16'h202)                        ) ? 8'd0:        
    (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
                                                              acc_add_wrap[7:0];
 

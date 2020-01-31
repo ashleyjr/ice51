@@ -43,11 +43,14 @@ module ice51_tb;
    integer     i;
    reg [7:0]   load_mem    [0:MEM_SIZE-1];
    reg [11:0]  uart_checks [0:CHECK_SIZE-1];
+   reg [11:0]  uart_drives [0:CHECK_SIZE-1];
+
 
    initial begin 
       $readmemh("load_mem.hex",  load_mem);
       $readmemh("checks.hex",    uart_checks);
-       //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
+      $readmemh("drives.hex",    uart_drives); 
+      //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
        //for(i=0;i<CHECK_SIZE;i=i+1)   $dumpvars(0,ice51_tb.uart_checks[i]); 
        //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.ice51_top.code.mem[i]); 
       for(i=0;i<8;i=i+1)               $dumpvars(0,ice51_tb.ice51_top.registers.mem[i]); 
@@ -122,7 +125,12 @@ module ice51_tb;
       $display("PASSED");
       $finish;
    end
-   
+
+   integer        count_tx;
+   integer        sent_tx;
+   reg      [7:0] tx;
+
+
    initial begin 
 					   i_uart_rx   = 1;
                   i_nrst		= 1;
@@ -133,6 +141,16 @@ module ice51_tb;
          for(i=0;i<MEM_SIZE;i=i+1)
             #(SAMPLE_TB) uart_send(load_mem[i]);
       `endif
+
+      // Test Txs 
+      count_tx = 0;
+      while(1 == uart_drives[count_tx][8]) begin
+         count_tx = count_tx + 1; 
+      end
+      
+
+      for(sent_tx=0;sent_tx<count_tx;sent_tx=sent_tx+1)
+         #(SAMPLE_TB) uart_send(uart_drives[sent_tx]);
 
       #10000000
       $display("ERROR: Timeout");

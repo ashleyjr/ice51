@@ -98,6 +98,8 @@ if [[ "$1" == "$ALL" ]]; then
       cp -f ${filename/\.c/$ext} load_mem.hex
       ext=".checks"
       cp -f ${filename/\.c/$ext} checks.hex
+      ext=".drives"
+      cp -f ${filename/\.c/$ext} drives.hex
       iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt
       OP=$(time (vvp ice51.dat -vcd)  2>&1)
       RES=$(echo "$OP" | grep "PASSED\|ERROR")
@@ -120,6 +122,8 @@ if [[ "$1" == "$SET" ]]; then
       cp -f ${filename/\.c/$ext} load_mem.hex
       ext=".checks"
       cp -f ${filename/\.c/$ext} checks.hex
+      ext=".drives"
+      cp -f ${filename/\.c/$ext} drives.hex
       iverilog -o ice51.dat -D SIM $P_PRELOAD -c etc/filelist.txt 
       OP=$(time (vvp ice51.dat -vcd)  2>&1)
       RES=$(echo "$OP" | grep "PASSED\|ERROR")
@@ -141,6 +145,11 @@ if [[ "$1" == "$SINGLE" ]]; then
    
    ext=".checks"
    CMD="cp -f ${2/\.c/$ext} checks.hex"
+   echo $CMD
+   $CMD
+   
+   ext=".drives"
+   CMD="cp -f ${2/\.c/$ext} drives.hex"
    echo $CMD
    $CMD
    

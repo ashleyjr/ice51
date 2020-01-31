@@ -16,7 +16,7 @@ all: $(OBJ) $(DBG) $(CHK) $(DRV)
 	python ~/ice51/verif/utils/output_driver.py -s "Check Uart" -e "End" -l 128 -f $< > $@
 
 %.drives: %.c
-	python ~/ice51/verif/utils/output_driver.py -s "Driver Uart" -e "End" -l 128 -f $< > $@
+	python ~/ice51/verif/utils/output_driver.py -s "Drive Uart" -e "End" -l 128 -f $< > $@
 
 %.hex: %.ihx
 	python ~/ice51/verif/utils/output_hex.py $< > $@
