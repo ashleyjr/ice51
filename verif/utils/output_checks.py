@@ -1,10 +1,8 @@
 import sys
+from optparse import OptionParser
 
-CHECK_SIZE = 128
-
-if "__main__" == __name__:
-    f = open(sys.argv[1],'r')
-    g = open(sys.argv[1].replace('.c','.checks'), 'w+')
+def main(start, end, filename, length):
+    f = open(filename,'r')
     found = False
     checks = 0
     for j in f.read().split('\n'):
@@ -12,13 +10,13 @@ if "__main__" == __name__:
 
             # Hex
             if ("0x" in j):
-                g.write("1"+j.split("0x")[1].lower() + "\n")
+                print("1"+j.split("0x")[1].lower() )
 
             # Chars
             elif found and ("\'" in j):
                 c = j.split("\'")[1]
                 c =str(hex(ord(c)))[2:4]
-                g.write("1"+c.lower() + "\n")
+                print ("1"+c.lower() )
 
             # Negs Dec
             elif ("//" in j) and ("-" in j):
@@ -34,7 +32,7 @@ if "__main__" == __name__:
                         t += p
                     p = p >> 1
                 d = str(hex(t + 1))[2:4]
-                g.write("1" + d + "\n")
+                print("1" + d )
 
             # Pos Dec
             elif "//" in j:
@@ -42,16 +40,34 @@ if "__main__" == __name__:
                 d = str(hex(int(d)))[2:4]
                 if len(d) < 2:
                     d = "0" + d
-                g.write("1" + d + "\n")
+                print("1" + d )
 
             checks = checks + 1
 
-        if "// Check Uart" in j:
+        if ("// "+start) in j:
             found = True
 
-    while(checks < 128):
-        g.write("000\n")
+        if ("// "+end) in j:
+            break
+
+    while(checks < int(length)):
+        print("000")
         checks = checks + 1
 
     f.close()
-    g.close()
+
+if "__main__" == __name__:
+    p = OptionParser()
+    p.add_option("-s", "--start",       dest="start",       help="Start token")
+    p.add_option("-e", "--end",         dest="end",         help="End token")
+    p.add_option("-f", "--filename",    dest="filename",    help="Input file")
+    p.add_option("-l", "--length",      dest="length",      help="Length of output")
+    (options, args) = p.parse_args()
+    main(   start       = options.start,
+            end         = options.end,
+            filename    = options.filename,
+            length      = options.length)
+
+
+
+

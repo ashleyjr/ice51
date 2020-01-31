@@ -2,15 +2,18 @@ CC  	:= sdcc
 SRC 	:= $(wildcard *.c)
 OBJ 	:= $(patsubst %.c,%.hex,$(SRC))
 DBG 	:= $(patsubst %.c,%.disasm,$(SRC))
+CHK 	:= $(patsubst %.c,%.checks,$(SRC))
 
-all: $(OBJ) $(DBG)
+all: $(OBJ) $(DBG) $(CHK)
 
 .SECONDARY:
 
 %.ihx: %.c
-	python ~/ice51/verif//utils/output_checks.py $< 
 	$(CC) $< -I ~/ice51/verif/inc/
 	
+%.checks: %.c
+	python ~/ice51/verif/utils/output_checks.py -s "Check Uart" -e "// End" -l 128 -f $< > $@
+
 %.hex: %.ihx
 	python ~/ice51/verif/utils/output_hex.py $< > $@
 
