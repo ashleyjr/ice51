@@ -9,16 +9,21 @@ void main (void){
       b = *rx_data;
       a = a + b;
       *data = a;
-      while(0x01 & *cont);
    } 
 }
 
 // Drive Uart:
 // 0x10
 // 0x10
+// 0x00
+// 0x00
+// 0xAA
+// 0xAA
 // End
 
 // Check Uart:
 // 0x20
+// 0x00
+// 0x54
 // End
 

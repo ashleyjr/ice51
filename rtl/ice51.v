@@ -138,6 +138,8 @@ reg   [$clog2(SAMPLE)-1:0]    uart_count;
 wire  [$clog2(SAMPLE)-1:0]    uart_count_next;
 reg   [7:0]                   uart_data;
 wire  [7:0]                   uart_data_next; 
+reg   [7:0]                   uart_data_rx;
+reg                           uart_data_rx_not_read;
 wire                          uart_load_done;
 reg                           uart_load_done_latched;
 wire  [7:0]                   uart_tx_next;
@@ -370,6 +372,19 @@ assign uart_data_next = (uart_start                         ) ? START_BIT:
 always@(posedge i_clk or negedge i_nrst) begin
    if(!i_nrst) uart_data   <= 'd0;
    else        uart_data   <= uart_data_next;
+end
+
+assign uart_data_rx_upd = uart_done & uart_load_done_latched & ~uart_data_rx_not_read;
+
+always@(posedge i_clk or negedge i_nrst) begin
+   if(!i_nrst)                uart_data_rx   <= 'd0;
+   else if(uart_data_rx_upd)  uart_data_rx   <= uart_data_next;
+end
+ 
+always@(posedge i_clk or negedge i_nrst) begin
+   if(!i_nrst)                      uart_data_rx_not_read   <= 'd0;
+   else  if(uart_data_rx_not_read)  uart_data_rx_not_read   <= ~(op_movxad & (dptr == 16'h203)); 
+         else                       uart_data_rx_not_read   <= uart_data_rx_upd & uart_load_done;
 end
  
 assign uart_count_next =   (  uart_start | uart_done  |
@@ -705,7 +720,8 @@ assign acc_next =
    (op_movad & (h_data == SP)                            ) ? sp: 
    (op_subbad | op_subbai | op_subbar | op_deca | op_mul |                 
     (op_subbad & d_acc)                                  ) ? acc_sub_wrap[7:0]: 
-   (op_movxad & (dptr == 16'h202)                        ) ? 8'd0:        
+   (op_movxad & (dptr == 16'h203)                        ) ? uart_data_rx:        
+   (op_movxad & (dptr == 16'h202)                        ) ? {7'd0, uart_data_rx_not_read }:        
    (op_movxad & (dptr == 16'h200)                        ) ? {7'd0, (uart_tx_state != SM_UART_TX_IDLE)}:        
                                                              acc_add_wrap[7:0];
 
