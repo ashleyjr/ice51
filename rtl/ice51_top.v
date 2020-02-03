@@ -2,7 +2,17 @@ module ice51_top(
    input    wire        i_clk,
    input    wire        i_nrst,
    input    wire        i_uart_rx,
-   output   wire        o_uart_tx 
+   output   wire        o_uart_tx, 
+   output   wire        o_vcc0,
+   output   wire        o_vcc1,
+   output   wire        o_led0,
+   output   wire        o_led1,
+   output   wire        o_led2,
+   output   wire        o_led3,
+   output   wire        o_led4,
+   output   wire        o_led5,
+   output   wire        o_led6,
+   output   wire        o_led7
 );
    wire        code_wr;
    wire  [9:0] code_addr;
@@ -19,6 +29,11 @@ module ice51_top(
    wire  [7:0] reg_data_wr;
    wire  [8:0] reg_raddr;
    wire  [7:0] reg_data_rd;
+
+   assign o_vcc0 = 1'b1;
+   assign o_vcc1 = 1'b1;
+   assign { o_led7, o_led6, o_led5, o_led4, 
+            o_led3, o_led2, o_led1, o_led0 } = code_data_wr;
 
    ice51 ice51(
       .i_clk         (i_clk         ),

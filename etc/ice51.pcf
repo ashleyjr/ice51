@@ -1,4 +1,23 @@
 set_io i_clk      J3
-set_io i_nrst     P1
-set_io o_uart_tx  P2
-set_io i_uart_rx  R1
+set_io i_nrst     D16
+set_io o_uart_tx  B12
+set_io i_uart_rx  B10
+set_io o_vcc0     C16
+set_io o_vcc1     B16
+set_io o_led0     B5
+set_io o_led1     B4
+set_io o_led2     A2
+set_io o_led3     A1
+set_io o_led4     C5
+set_io o_led5     C4
+set_io o_led6     B3
+set_io o_led7     C3
+
+
+
+
+
+
+
+
+

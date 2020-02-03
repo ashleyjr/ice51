@@ -4,6 +4,6 @@ echo "Packing..."
 icepack ice51.asc ice51.bin
 echo "========================================================"
 echo "Writing..."
-sudo iceprog -S ice51.bin
+sudo iceprog  -S ice51.bin
 echo "========================================================"
 
