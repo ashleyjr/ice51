@@ -48,7 +48,7 @@ def main(start, end, filename, length):
             found = True
 
         if ("// "+end) in j:
-            foud = False
+            found = False
 
     while(checks < int(length)):
         print("000")

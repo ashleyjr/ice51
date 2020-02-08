@@ -9,7 +9,7 @@ module ice51_tb;
    parameter   MEM_SIZE = 1024;
 
    // Check size
-   parameter   CHECK_SIZE = 128;
+   parameter   CHECK_SIZE = 65536;
 
    // BAUD = 115200
    parameter   SAMPLE_TB = 8681;
