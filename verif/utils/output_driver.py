@@ -8,8 +8,12 @@ def main(start, end, filename, length):
     for j in f.read().split('\n'):
         if found:
 
+            # Phases
+            if ("//" in j) and ("p" in j):
+                print("200")
+
             # Hex
-            if ("0x" in j):
+            elif ("0x" in j):
                 print("1"+j.split("0x")[1].lower() )
 
             # Chars

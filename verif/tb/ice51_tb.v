@@ -34,17 +34,21 @@ module ice51_tb;
 		end
 	end
 
+   initial begin 
+      #10000000
+      $display("ERROR: Timeout");
+      $finish;
+	end
+
 	initial begin
 		$dumpfile("ice51.vcd");
-	   $dumpvars(0,ice51_tb); 
-	   
+	   $dumpvars(0,ice51_tb);  
    end
 
    integer     i;
    reg [7:0]   load_mem    [0:MEM_SIZE-1];
    reg [11:0]  uart_checks [0:CHECK_SIZE-1];
    reg [11:0]  uart_drives [0:CHECK_SIZE-1];
-
 
    initial begin 
       $readmemh("load_mem.hex",  load_mem);
@@ -79,46 +83,90 @@ module ice51_tb;
       end
    endtask
 
-
-
-
-   integer   j;
-   integer   rx_ptr; 
-   integer   exp_rx;
-   reg [7:0] rx;
-   reg [7:0] rxs [0:CHECK_SIZE-1];
+   integer     check_phases;
+   integer     drive_phases;
+   integer     phase;
+   integer     j;
+   integer     rx_ptr; 
+   integer     tx_ptr;
+   integer     exp_rx;
+   reg [7:0]   rx;
+   reg [7:0]   rxs      [0:CHECK_SIZE-1];
 
    initial begin
-      // Expected rxs
+      // Check phases
       j = 0;
-      exp_rx = 0;
-      while(1 == uart_checks[j][8]) begin
-         exp_rx = exp_rx + 1;
-         j = j + 1;
-      end
-      
-      // Wait for reset
-      repeat(2) 
-         @(posedge i_nrst);
-      
-      // Look for expected
-      rx_ptr = 0;
-      while(rx_ptr != exp_rx) begin 
-         
-         uart_rx(rx);
-         $display("UART RX: 0x%x (exp == 0x%x)",rx,uart_checks[rx_ptr][7:0]); 
-         
-         if(rx != uart_checks[rx_ptr][7:0]) begin
-            repeat(1000)
-               @(posedge i_clk);
-            $display("ERROR: Unexpected rx");
-            $finish;
+      check_phases = 1;
+      while(4'h0 != uart_checks[j][11:8]) begin
+         if(4'h2 == uart_checks[j][11:8]) begin
+            check_phases = check_phases + 1;
          end
-         
-         rxs[rx_ptr] = rx;
-         rx_ptr = rx_ptr + 1; 
+         j = j + 1;
+      end     
+
+      // Drive phases
+      j = 0;
+      drive_phases = 1;
+      while(4'h0 != uart_drives[j][11:8]) begin
+         if(4'h2 == uart_drives[j][11:8]) begin
+            drive_phases = drive_phases + 1;
+         end
+         j = j + 1;
+      end     
+
+      // Fail of phases do not match
+      if(check_phases != drive_phases) begin
+         $display("ERROR: Phase mismatch");
+         $finish;
       end
 
+      // Reset phase
+                  i_uart_rx   = 1;
+                  i_nrst		= 1;
+      #1000       i_nrst      = 0;
+      #1000       i_nrst      = 1;
+
+      // Load code
+      `ifndef PRELOAD
+         for(i=0;i<MEM_SIZE;i=i+1)
+            #(SAMPLE_TB) uart_tx(load_mem[i]);
+      `endif
+
+
+      // Run phases  
+      rx_ptr = 0;
+      tx_ptr = 0;
+
+      for(phase=0;phase<check_phases;phase=phase+1) begin 
+         $display("Phase %d of %d",phase,check_phases-1);
+         fork 
+            // RX
+            begin 
+               while(4'h1 == uart_checks[rx_ptr][11:8]) begin
+                  uart_rx(rx);
+                  $display("UART RX: 0x%x (exp == 0x%x)",rx,uart_checks[rx_ptr][7:0]);
+                  if(rx != uart_checks[rx_ptr][7:0]) begin
+                     $finish;
+                  end
+                  rx_ptr = rx_ptr + 1;
+               end
+               rx_ptr = rx_ptr + 1; 
+            end
+         
+            // TX
+            begin
+            
+               while(4'h1 == uart_drives[tx_ptr][11:8])    begin
+                  uart_tx(uart_drives[tx_ptr][7:0]);
+                  $display("UART TX: 0x%x",uart_drives[tx_ptr][7:0]); 
+                  tx_ptr = tx_ptr + 1;
+               end
+               tx_ptr = tx_ptr + 1;
+            end
+         join
+      end
+   
+       
       // Check no unwanted rxs
       repeat(10000) begin
          @(posedge i_clk);
@@ -135,35 +183,5 @@ module ice51_tb;
       $finish;
    end
 
-   integer        count_tx;
-   integer        sent_tx;
-   reg      [7:0] tx;
-
-
-   initial begin 
-					   i_uart_rx   = 1;
-                  i_nrst		= 1;
-      #1000       i_nrst      = 0;
-      #1000       i_nrst      = 1;
-
-      `ifndef PRELOAD
-         for(i=0;i<MEM_SIZE;i=i+1)
-            #(SAMPLE_TB) uart_tx(load_mem[i]);
-      `endif
-
-      // Test Txs 
-      count_tx = 0;
-      while(1 == uart_drives[count_tx][8]) begin
-         count_tx = count_tx + 1; 
-      end
-      
-
-      for(sent_tx=0;sent_tx<count_tx;sent_tx=sent_tx+1)
-         #(SAMPLE_TB) uart_tx(uart_drives[sent_tx]);
-
-      #10000000
-      $display("ERROR: Timeout");
-      $finish;
-	end
 
 endmodule
