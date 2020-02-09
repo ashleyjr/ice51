@@ -54,7 +54,7 @@ module ice51_tb;
          $dumpvars(0,ice51_tb.ice51_top.registers.mem[i]); 
    end
   	
-   task uart_send;
+   task uart_tx;
       input [7:0] send;
       integer i;
       begin
@@ -65,11 +65,27 @@ module ice51_tb;
          #SAMPLE_TB  i_uart_rx = 1;
       end
    endtask
+   
+   task uart_rx;
+      output [7:0] rx;
+      integer i;
+      begin
+         while(o_uart_tx) 
+            @(posedge i_clk); 
+         for(j=0;j<8;j=j+1) begin
+            #SAMPLE_TB  rx[j] = o_uart_tx;
+         end 
+         #SAMPLE_TB;
+      end
+   endtask
+
+
+
 
    integer   j;
    integer   rx_ptr; 
    integer   exp_rx;
-   reg [7:0] uart_tx;
+   reg [7:0] rx;
    reg [7:0] rxs [0:CHECK_SIZE-1];
 
    initial begin
@@ -88,23 +104,18 @@ module ice51_tb;
       // Look for expected
       rx_ptr = 0;
       while(rx_ptr != exp_rx) begin 
-         uart_tx = 0; 
-         while(o_uart_tx) 
-            @(posedge i_clk); 
-         for(j=0;j<8;j=j+1) begin
-            #SAMPLE_TB  uart_tx[j] = o_uart_tx;
-         end 
-         #SAMPLE_TB
-         $display("UART RX: 0x%x (exp == 0x%x)",uart_tx,uart_checks[rx_ptr][7:0]); 
          
-         if(uart_tx != uart_checks[rx_ptr][7:0]) begin
+         uart_rx(rx);
+         $display("UART RX: 0x%x (exp == 0x%x)",rx,uart_checks[rx_ptr][7:0]); 
+         
+         if(rx != uart_checks[rx_ptr][7:0]) begin
             repeat(1000)
                @(posedge i_clk);
             $display("ERROR: Unexpected rx");
             $finish;
          end
          
-         rxs[rx_ptr] = uart_tx;
+         rxs[rx_ptr] = rx;
          rx_ptr = rx_ptr + 1; 
       end
 
@@ -137,7 +148,7 @@ module ice51_tb;
 
       `ifndef PRELOAD
          for(i=0;i<MEM_SIZE;i=i+1)
-            #(SAMPLE_TB) uart_send(load_mem[i]);
+            #(SAMPLE_TB) uart_tx(load_mem[i]);
       `endif
 
       // Test Txs 
@@ -148,7 +159,7 @@ module ice51_tb;
       
 
       for(sent_tx=0;sent_tx<count_tx;sent_tx=sent_tx+1)
-         #(SAMPLE_TB) uart_send(uart_drives[sent_tx]);
+         #(SAMPLE_TB) uart_tx(uart_drives[sent_tx]);
 
       #10000000
       $display("ERROR: Timeout");
