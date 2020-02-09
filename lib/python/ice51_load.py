@@ -111,56 +111,87 @@ def main(options):
     drives = f.read()
     f.close()
 
-    drive = []
+
+    '''
+    Phase check
+    '''
+    drive_phases = 1
     for d in drives.split('\n')[0:-1]:
-        if d != '000':
-            drive.append(d)
-    check = []
+        if d == '200':
+            drive_phases += 1
+    check_phases = 1
     for c in checks.split('\n')[0:-1]:
-        if c != '000':
-            check.append(c)
+        if c == '200':
+            check_phases += 1
 
 
-    l_check = len(check)
-    l_drive = len(drive)
-    print "Checks:         " + str(l_check)
-    print "Drives:         " + str(l_drive)
+    if drive_phases != check_phases:
+        print "Phases mismatch"
+        print "FAILED"
+        sys.exit(0)
+    print "Phases:           %d" % (check_phases-1)
+
+    '''
+    Build phases
+    '''
+    d_ptr = 0
+    c_ptr = 0
+    phases = []
+    ds = drives.split('\n')[0:-1]
+    cs = checks.split('\n')[0:-1]
+    for i in range(0, check_phases):
+        phase = {}
+
+        drive = []
+        while ds[d_ptr] != '200':
+            if (ds[d_ptr] != '000'):
+                drive.append(int(ds[d_ptr][1:3],16))
+            d_ptr += 1
+            if d_ptr == len(ds):
+                break
+        d_ptr += 1
+
+        check = []
+        while cs[c_ptr] != '200':
+            if (cs[c_ptr] != '000'):
+                check.append(int(cs[c_ptr][1:3],16))
+            c_ptr += 1
+            if c_ptr == len(cs):
+                break
+        c_ptr += 1
+
+        if (len(check) > 0) and (len(drive) > 0):
+            phase['check'] = check
+            phase['drive'] = drive
+            phases.append(phase)
 
     ok = True
-    drive_index = 0
-    check_index = 0
-    while (drive_index < l_drive) or \
-          (check_index < l_check):
-
-        if drive_index < len(drive):
-            a = int(drive[drive_index][1:3], 16)
-            u.tx(a)
-            time.sleep(0.0001)
+    last_progress = 0
+    for p in range(len(phases)):
+        for t in phases[p]['drive']:
+            u.tx(t)
             if options.debug:
-                print "Sent: " +str(hex(a))
-            drive_index += 1
-
-        if (check_index < len(check)) and not u.rx_buffer_empty():
-            a = int(check[check_index][1:3], 16)
-            b = u.rx()
+                print "UART_TX: " + str(hex(t))
+        for c in phases[p]['check']:
+            a = u.rx()
             if options.debug:
-                print "Got: " +str(hex(a)) + ", Exp: " +str(hex(b))
-            if a != b:
+                print "UART RX: " +str(hex(a)) + ", Exp: " +str(hex(c))
+            if a != c:
                 ok = False
                 break
-            check_index += 1
-
+        if not ok:
+            break
 
         if not options.debug:
-            progress = drive_index + check_index
-            progress = (30 * progress) / (l_drive + l_check)
-            print "\r|",
+            progress = (30 * (p+1)) / len(phases)
+            sys.stdout.write("\r|")
             for i in range(0, 31):
                 if i <= progress:
-                    print "#",
+                    sys.stdout.write("#")
                 else:
-                    print " ",
-            print "|",
+                    sys.stdout.write(" ")
+            sys.stdout.write("|\r")
+            last_progress = progress
 
     print "\n",
     if ok:

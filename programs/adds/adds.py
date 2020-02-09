@@ -1,6 +1,6 @@
 import random as r
 
-vectors = 10000
+vectors = 1000
 check   = []
 drive   = []
 for v in range(vectors):
@@ -17,9 +17,12 @@ for v in range(vectors):
 print "// Check Uart:"
 for c in check:
     print '// 0x%02x' % c
+    print '// p'
 print "// End"
 print "// Drive Uart:"
-for d in drive:
-    print '// 0x%02x' % d
+for i in range(0,len(drive)):
+    print '// 0x%02x' % drive[i]
+    if (0 == ((i+1) % 2)):
+        print '// p'
 print "// End"
 

@@ -1,6 +1,7 @@
 *.asm
 *.checks
 *.drives
+*.driver
 *.hex
 *.ihx
 *.lk
