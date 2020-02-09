@@ -1,6 +1,6 @@
 import random as r
 
-vectors = 10
+vectors = 1000
 check   = []
 drive   = []
 for v in range(vectors):

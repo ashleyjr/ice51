@@ -10,7 +10,7 @@ from optparse import OptionParser
 
 class uart:
     BAUDRATE= 115200
-    RX_BUFFER_SIZE = 100000
+    RX_BUFFER_SIZE = 1024
 
     def __init__(self):
         ports =  serial.tools.list_ports.comports()
@@ -168,6 +168,10 @@ def main(options):
     ok = True
     last_progress = 0
     for p in range(len(phases)):
+
+        if options.debug:
+            print "PHASE: " +str(p)
+
         for t in phases[p]['drive']:
             u.tx(t)
             if options.debug:

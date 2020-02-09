@@ -35,7 +35,7 @@ module ice51_tb;
 	end
 
    initial begin 
-      #10000000
+      #1000000000
       $display("ERROR: Timeout");
       $finish;
 	end
@@ -67,6 +67,7 @@ module ice51_tb;
             #SAMPLE_TB  i_uart_rx = send[i];
          end
          #SAMPLE_TB  i_uart_rx = 1;
+         #SAMPLE_TB;
       end
    endtask
    
@@ -129,7 +130,7 @@ module ice51_tb;
       // Load code
       `ifndef PRELOAD
          for(i=0;i<MEM_SIZE;i=i+1)
-            #(SAMPLE_TB) uart_tx(load_mem[i]);
+            uart_tx(load_mem[i]);
       `endif
 
 
@@ -146,6 +147,7 @@ module ice51_tb;
                   uart_rx(rx);
                   $display("UART RX: 0x%x (exp == 0x%x)",rx,uart_checks[rx_ptr][7:0]);
                   if(rx != uart_checks[rx_ptr][7:0]) begin
+                     $display("ERROR: Mismatch");
                      $finish;
                   end
                   rx_ptr = rx_ptr + 1;

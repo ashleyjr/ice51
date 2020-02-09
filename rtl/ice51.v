@@ -399,7 +399,8 @@ end
 `ifdef PRELOAD
 assign uart_load_done = 1'b1;
 `else
-assign uart_load_done = ((pc_next == 'd0) & uart_done) | uart_load_done_latched;
+assign uart_load_done = (((pc_next == 'd0) & uart_done) | uart_load_done_latched) & 
+                        ~(sme & op_movxda & (dptr == 16'h0205));
 `endif
 
 always@(posedge i_clk or negedge i_nrst) begin
@@ -655,6 +656,7 @@ assign pc_sub  =
                                 pc_twos; 
                      
 assign pc_next =  
+   (sme & op_movxda & (dptr == 16'h0205)                       ) ? 'd0:
    (pc_ret_top                                                 ) ? {i_data_data, pc[7:0]}: 
    (pc_ret_bot                                                 ) ? {pc[15:8], i_data_data}:  
    (pc_replace                                                 ) ? {h_data,l_data}:

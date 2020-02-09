@@ -7,10 +7,10 @@ void main (void){
       while(0 == *rx_cont);
       a = *rx_data;
       b = a * a;
+      while(0x01 & *cont);
       *data = b;
       while(0x01 & *cont);
       *data = b >> 8;
-      while(0x01 & *cont);
    }; 
 }
 

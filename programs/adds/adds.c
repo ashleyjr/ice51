@@ -1,7 +1,8 @@
 #include "ice51.h"
 void main (void){
+   int i;
    char a,b;
-   while(1){
+   for(i=0;i<1000;i++){
       while(0 == *rx_cont);
       a = *rx_data;
       while(0 == *rx_cont);
@@ -10,4 +11,5 @@ void main (void){
       while(0x01 & *cont);
       *data = a;
    }
+   *rst = 0;
 }
