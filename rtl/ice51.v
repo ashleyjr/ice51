@@ -694,14 +694,14 @@ assign o_reg_wr  =
 
 assign reg1 = (op_mova1 | op_movdt1 | op_movt1a);
 
-assign o_reg_raddr[8:3] = 6'h3F;
+assign o_reg_raddr[8:3] = 6'h00;
 assign o_reg_raddr[2:0] =
    (op_mova0 | op_movdt0 | reg1           ) ? {2'b00,reg1}:
    (op_movdt0 | op_movdt1 | op_xrlda | 
     op_push | op_pop | op_pop | op_orldi  ) ? h_data[2:0] : 
                                               op[2:0];
 
-assign o_reg_waddr[8:3] = 6'h3F;
+assign o_reg_waddr[8:3] = 6'h00;
 assign o_reg_waddr[2:0] = 
    (op_movd) ? i_code_data[2:0] : o_reg_raddr;
 

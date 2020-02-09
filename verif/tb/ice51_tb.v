@@ -50,10 +50,8 @@ module ice51_tb;
       $readmemh("load_mem.hex",  load_mem);
       $readmemh("checks.hex",    uart_checks);
       $readmemh("drives.hex",    uart_drives); 
-      //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.load_mem[i]); 
-       //for(i=0;i<CHECK_SIZE;i=i+1)   $dumpvars(0,ice51_tb.uart_checks[i]); 
-       //for(i=0;i<MEM_SIZE;i=i+1)     $dumpvars(0,ice51_tb.ice51_top.code.mem[i]); 
-      for(i=0;i<8;i=i+1)               $dumpvars(0,ice51_tb.ice51_top.registers.mem[i]); 
+      for(i=0;i<8;i=i+1)         
+         $dumpvars(0,ice51_tb.ice51_top.registers.mem[i]); 
    end
   	
    task uart_send;
