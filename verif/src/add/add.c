@@ -1,3 +1,4 @@
+#include "uart.h"
 
 void main (void){       
    char i;

@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 #define MSB_SET(x) ((x >> (8*sizeof(x)-1)) & 1)
 
@@ -13,17 +13,10 @@ void main (void){
       t = MSB_SET(a);
    } while(0 == t); 
     
-   *data = a >> 24;
-   while(0x01 & *cont);
-   
-   *data = a >> 16;
-   while(0x01 & *cont);
-   
-   *data = a >> 8;
-   while(0x01 & *cont);
-     
-   *data = a;
-   while(0x01 & *cont);
+   uart_tx(a >> 24);
+   uart_tx(a >> 16);
+   uart_tx(a >> 8); 
+   uart_tx(a);
    
    while(1); 
 }

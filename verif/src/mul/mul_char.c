@@ -1,12 +1,11 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    char a,b,c;
    for(a=10;a<13;a++){
       for(b=10;b<13;b++){
          c = a * b;
-         *data = c;
-         while(0x01 & *cont);
+         uart_tx(c);
       }
    }
    while(1); 

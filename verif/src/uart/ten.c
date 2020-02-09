@@ -1,25 +1,16 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
-   *data = 0x55;
-   while(0x01 & *cont);
-   *data = 0x66;
-   while(0x01 & *cont);
-   *data = 0x77; 
-   while(0x01 & *cont);
-   *data = 0x88;
-   while(0x01 & *cont);
-   *data = 0x99;
-   while(0x01 & *cont);
-   *data = 0xAA;
-   while(0x01 & *cont);
-   *data = 0xBB;
-   while(0x01 & *cont);
-   *data = 0xCC;
-   while(0x01 & *cont);
-   *data = 0xDD;
-   while(0x01 & *cont);
-   *data = 0xEE; 
+   uart_tx(0x55); 
+   uart_tx(0x66);
+   uart_tx(0x77); 
+   uart_tx(0x88);
+   uart_tx(0x99);
+   uart_tx(0xAA);
+   uart_tx(0xBB);
+   uart_tx(0xCC);
+   uart_tx(0xDD);
+   uart_tx(0xEE); 
    while(1); 
 }
 

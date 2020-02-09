@@ -1,3 +1,5 @@
+#include "uart.h"
+
 void main (void){       
    char a,b;
    while(1){

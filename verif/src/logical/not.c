@@ -1,16 +1,14 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    unsigned char a,c;
    for(a=0;a<5;a++){ 
       c = ~a;
-      *data = c;
-      while(0x01 & *cont);
+      uart_tx(c);
    } 
    for(a=255;a>250;a--){ 
       c = ~a;
-      *data = c;
-      while(0x01 & *cont);
+      uart_tx(c);
    }
    while(1); 
 }

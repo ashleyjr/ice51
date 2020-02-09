@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 unsigned long mul(unsigned int a, unsigned int b){
    unsigned int i,j,k,l; 
@@ -45,17 +45,10 @@ void main (void){
       
          acc = mul(a,b); 
                   
-         *data = acc >> 24;
-         while(0x01 & *cont);
- 
-         *data = acc >> 16;
-         while(0x01 & *cont);     
-
-         *data = acc >> 8;
-         while(0x01 & *cont);
-         
-         *data = acc;
-         while(0x01 & *cont);
+         uart_tx(acc >> 24);
+         uart_tx(acc >> 16); 
+         uart_tx(acc >> 8);
+         uart_tx(acc);
       }
    }
    while(1); 

@@ -9,9 +9,13 @@ all: $(OBJ) $(DBG) $(CHK) $(DRV)
 
 .SECONDARY:
 
-%.ihx: %.c
-	$(CC) $< -I ~/ice51/verif/inc/ ~/ice51/verif/src
+%.rel: %.c
+	$(CC) -c ~/ice51/verif/src/uart.c -I ~/ice51/verif/inc/
+	$(CC) -c $<  -I ~/ice51/verif/inc/	
 	
+%.ihx: %.rel	
+	$(CC) $< uart.rel -I ~/ice51/verif/inc/	
+
 %.checks: %.c
 	python ~/ice51/verif/utils/output_driver.py -s "Check Uart" -e "End" -l 128 -f $< > $@
 

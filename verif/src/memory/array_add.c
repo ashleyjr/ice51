@@ -1,16 +1,16 @@
-#include "ice51.h"
-#define LEN 21
+#include "uart.h"
+#define LEN 20
 
 void main (void){        
-   unsigned char i;
+   unsigned char i,add;
    unsigned char adds[LEN];
    adds[0] = 1;
    for(i=1;i<(LEN+1);i++){
       adds[i] = adds[i-1] + i;
    }
    for(i=0;i<(LEN+1);i++){
-      while(0x01 & *cont); 
-      *data = adds[i];
+      add = adds[i];
+      uart_tx(add);
    }
    while(1); 
 }
@@ -37,4 +37,3 @@ void main (void){
 // 0xac
 // 0xbf
 // 0xd3
-// 0xe8

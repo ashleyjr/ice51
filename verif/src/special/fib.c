@@ -1,18 +1,17 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    char i;
    unsigned char l,m;
    l = 1;
    m = 1;
-   *data = l;
+   uart_tx(l);
    for(i=0;i<12;i++){
-      while(0x01 & *cont);
       m = l + m;
       l = l ^ m;  // XOR swap
       m = l ^ m;
       l = l ^ m;
-      *data = m;
+      uart_tx(m);
    }
    while(1); 
 }

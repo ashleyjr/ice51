@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    unsigned char i,a,b,c;
@@ -8,22 +8,19 @@ void main (void){
       a = i;
       b = a / 100;
       c = b + 48;
-      
-      *data = c;
-      while(0x01 & *cont);
+
+      uart_tx(c);
   
       a -= b*100;
       b = a / 10;
       c = b + 48;
-       
-      *data = c;
-      while(0x01 & *cont);
+      
+      uart_tx(c);
       
       a -= b*10;
       c = a + 48;
- 
-      *data = c;
-      while(0x01 & *cont);
+
+      uart_tx(c);
 
    }
    while(1); 

@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 unsigned char isprime(unsigned char p){
    unsigned char i,d,t; 
@@ -17,8 +17,7 @@ void main (void){
    unsigned char i;
    for(i=151;i<170;i+=2){
       if(isprime(i)){
-         while(0x01 & *cont);
-         *data = i;
+         uart_tx(i);
       }
    }
    while(1); 

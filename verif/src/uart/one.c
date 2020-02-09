@@ -1,8 +1,7 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){      
-   *data = 0xBB;
-   while(1); 
+   uart_tx(0xBB);
 }
 
 // Check Uart:

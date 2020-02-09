@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){        
    int i;
@@ -7,10 +7,8 @@ void main (void){
    while((i < -32765) || (i > 32765)){ 
       a = i >> 8;
       b = i;
-      *data = a;  
-      while(0x01 & *cont);
-      *data = b;  
-      while(0x01 & *cont); 
+      uart_tx(a);
+      uart_tx(b);
       i++;
    }
    

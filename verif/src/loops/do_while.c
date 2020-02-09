@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    unsigned char sum = 0;
@@ -6,9 +6,8 @@ void main (void){
    do{
       sum += x;
    }while(--x); 
-      
-   *data = sum;
-   while(0x01 & *cont);
+
+   uart_tx(sum);
    
    while(1); 
 }

@@ -1,9 +1,8 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
-   *data = 0xBB;
-   while(0x01 & *cont);
-   *data = 0xCC;
+   uart_tx(0xBB);
+   uart_tx(0xCC);
    while(1); 
 }
 

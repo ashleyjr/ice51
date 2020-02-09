@@ -1,4 +1,4 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    char a,b;
@@ -6,11 +6,8 @@ void main (void){
    for(a=100;a<103;a++){
       c = a * 100;
       
-      *data = c >> 8;
-      while(0x01 & *cont);
-      
-      *data = c;
-      while(0x01 & *cont);
+      uart_tx(c >> 8);
+      uart_tx(c);
    }
    while(1); 
 }

@@ -1,16 +1,13 @@
-#include "ice51.h"
+#include "uart.h"
 
 void main (void){       
    unsigned char a;
    unsigned short b;
    while(1){
-      while(0 == *rx_cont);
-      a = *rx_data;
+      a = uart_rx();
       b = a * a;
-      while(0x01 & *cont);
-      *data = b;
-      while(0x01 & *cont);
-      *data = b >> 8;
+      uart_tx(b);
+      uart_tx(b >> 8);
    }; 
 }
 
