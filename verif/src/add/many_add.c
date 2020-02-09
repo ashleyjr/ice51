@@ -4,13 +4,13 @@ void main (void){
    unsigned char a,b,c,d,e,f,g,h,i;
    a = 1;
    b = 1;
-   c = a + b;                          while(0x01 & *cont); *data = c;
-   d = a + b + c;                      while(0x01 & *cont); *data = d; 
-   e = a + b + c + d;                  while(0x01 & *cont); *data = e; 
-   f = a + b + c + d + e;              while(0x01 & *cont); *data = f; 
-   g = a + b + c + d + e + f;          while(0x01 & *cont); *data = g; 
-   h = a + b + c + d + e + f + g;      while(0x01 & *cont); *data = h;
-   i = a + b + c + d + e + f + g + h;  while(0x01 & *cont); *data = i;
+   c = a + b;                          uart_tx(c);
+   d = a + b + c;                      uart_tx(d); 
+   e = a + b + c + d;                  uart_tx(e); 
+   f = a + b + c + d + e;              uart_tx(f); 
+   g = a + b + c + d + e + f;          uart_tx(g); 
+   h = a + b + c + d + e + f + g;      uart_tx(h);
+   i = a + b + c + d + e + f + g + h;  uart_tx(i);
    while(1); 
 }
 

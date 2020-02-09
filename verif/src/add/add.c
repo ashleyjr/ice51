@@ -1,10 +1,8 @@
-#include "ice51.h"
 
 void main (void){       
    char i;
    for(i=0x55;i<0x66;i++){
-      *data = i;
-      while(0x01 & *cont);
+      uart_tx(i);
    }
    while(1); 
 }

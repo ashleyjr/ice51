@@ -3,8 +3,7 @@
 void main (void){       
    char i;
    for(i=-5;i<6;i++){
-      *data = i;
-      while(0x01 & *cont);
+      uart_tx(i);
    }
    while(1); 
 }
