@@ -35,7 +35,7 @@ module ice51_tb;
 	end
 
    initial begin 
-      #1000000000
+      #20000000
       $display("ERROR: Timeout");
       $finish;
 	end
